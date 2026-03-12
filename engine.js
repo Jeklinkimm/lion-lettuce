@@ -1068,7 +1068,7 @@ class GameEngine {
     const sc = this.lion.baseScale;
     const jawDown = this.lion.jawOpen * this.lion.jawMaxOffset * sc;
     const upperBottom = this.lion.UPPER_H * 0.28 * sc;
-    const mouthY = this.lion.y + (upperBottom + jawDown) / 2;
+    const mouthY = this.lion.y + upperBottom + jawDown * 0.35;
 
     const praisePool = ['잘했어!', '대단해!', '최고야!', '멋져!', '와 잘한다!', '굿!'];
 
@@ -1193,8 +1193,9 @@ class GameEngine {
     for (const c of this.cabbages) {
       if (c.phase === 'stuck') {
         c.x = this.lion.x;
+        // 상악 하단과 하악 상단의 정중앙
         const upperBottom = this.lion.UPPER_H * 0.28 * sc;
-        c.y = this.lion.y + (upperBottom + jawDown) / 2;
+        c.y = this.lion.y + upperBottom + jawDown * 0.35;
       }
       c.update(dt);
     }
