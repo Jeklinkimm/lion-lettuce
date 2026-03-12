@@ -220,7 +220,7 @@ class SoundManager {
     gain.gain.value = 0.9;
     src.connect(gain);
     gain.connect(this.ctx.destination);
-    src.start(0, 0.15); // 앞 무음 0.15초 건너뛰기
+    src.start();
   }
 
   /** 칭찬 음성 피드백 (녹음된 WAV 순서대로 재생) */
