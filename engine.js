@@ -201,6 +201,28 @@ class SoundManager {
     });
   }
 
+  /** 준비-시작 음성 로드 */
+  loadReadyVoice(basePath = 'assets') {
+    this.readyBuffer = null;
+    fetch(`${basePath}/voice/ready-set-go/voice_ready_start.wav`)
+      .then(r => r.arrayBuffer())
+      .then(buf => this.ctx.decodeAudioData(buf))
+      .then(decoded => { this.readyBuffer = decoded; console.log('Loaded ready voice'); })
+      .catch(e => console.warn('Failed to load ready voice:', e));
+  }
+
+  /** 준비-시작 음성 재생 */
+  playReady() {
+    if (!this.ready || !this.readyBuffer) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.readyBuffer;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start();
+  }
+
   /** 칭찬 음성 피드백 (녹음된 WAV 순서대로 재생) */
   playPraise(text) {
     if (!this.ready || !this.cheerBuffers || this.cheerBuffers.length === 0) return;
@@ -972,6 +994,7 @@ class GameEngine {
     await Assets.load();
     this.sound.init();
     this.sound.loadCheerVoices();
+    this.sound.loadReadyVoice();
     this.lion.x = this.CW / 2;
     this.lion.y = this.CH * 0.55;
   }

@@ -190,6 +190,9 @@ canvas { display: block; width: 100%; height: 100%; }
     <div class="start-title" style="position:relative; z-index:2;">와구와구 게임</div>
     <img src="assets/startBt/Subject.png" class="start-btn-img" style="position:relative; z-index:2;" onclick="beginGame()" alt="게임시작">
   </div>
+  <div id="countdownOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;z-index:40;pointer-events:none;">
+    <div id="countdownText" style="font-size:96px;font-weight:900;color:#3a6e28;text-shadow:0 4px 0 rgba(58,110,40,0.2),0 8px 24px rgba(0,0,0,0.15);transition:transform 0.3s ease-out, opacity 0.3s ease-out;"></div>
+  </div>
 </div>
 
 <script src="engine.js"></script>
@@ -409,12 +412,48 @@ engine.onGameEnd = (score) => {
 
 function beginGame() {
   document.getElementById('startOverlay').classList.add('hidden');
-  document.getElementById('hud').style.display = 'block';
-  prevEatenCount = 0;
-  document.getElementById('hudEaten').innerHTML = '';
-  engine.timeLeft = 60; engine.totalTime = 60;
-  engine.start();
   engine.sound.resume();
+
+  const overlay = document.getElementById('countdownOverlay');
+  const text = document.getElementById('countdownText');
+  overlay.style.display = 'flex';
+
+  // 준비
+  text.textContent = '준비';
+  text.style.transform = 'scale(1)';
+  text.style.opacity = '1';
+  engine.sound.playReady();
+
+  setTimeout(() => {
+    // 시작!
+    text.style.transform = 'scale(1.3)';
+    text.style.opacity = '0';
+    setTimeout(() => {
+      text.textContent = '시작!';
+      text.style.transition = 'none';
+      text.style.transform = 'scale(0.5)';
+      text.style.opacity = '0';
+      requestAnimationFrame(() => {
+        text.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        text.style.transform = 'scale(1)';
+        text.style.opacity = '1';
+      });
+    }, 300);
+  }, 1500);
+
+  setTimeout(() => {
+    // 페이드아웃 후 게임 시작
+    text.style.transform = 'scale(1.3)';
+    text.style.opacity = '0';
+    setTimeout(() => {
+      overlay.style.display = 'none';
+    }, 400);
+    document.getElementById('hud').style.display = 'block';
+    prevEatenCount = 0;
+    document.getElementById('hudEaten').innerHTML = '';
+    engine.timeLeft = 60; engine.totalTime = 60;
+    engine.start();
+  }, 2800);
 }
 
 function toggleDebug() { engine.debugMode = !engine.debugMode; showSkeleton = !showSkeleton; }
