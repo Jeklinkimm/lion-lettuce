@@ -182,15 +182,35 @@ class SoundManager {
     });
   }
 
-  /** 칭찬 음성 피드백 (SpeechSynthesis 한국어 TTS) */
+  /** 칭찬 음성 로드 (WAV 파일) */
+  loadCheerVoices(basePath = 'assets') {
+    this.cheerBuffers = [];
+    const files = [
+      `${basePath}/voice/cheer/voice_cheer_04.wav`,
+      `${basePath}/voice/cheer/voice_cheer_07.wav`,
+      `${basePath}/voice/cheer/voice_cheer_09.wav`,
+      `${basePath}/voice/cheer/voice_cheer_12.wav`,
+    ];
+    files.forEach(url => {
+      fetch(url)
+        .then(r => r.arrayBuffer())
+        .then(buf => this.ctx.decodeAudioData(buf))
+        .then(decoded => { this.cheerBuffers.push(decoded); console.log('Loaded cheer:', url); })
+        .catch(e => console.warn('Failed to load cheer:', url, e));
+    });
+  }
+
+  /** 칭찬 음성 피드백 (녹음된 WAV 랜덤 재생) */
   playPraise(text) {
-    if (!('speechSynthesis' in window)) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'ko-KR';
-    utter.rate = 1.1;
-    utter.pitch = 1.3;
-    utter.volume = 0.9;
-    speechSynthesis.speak(utter);
+    if (!this.ready || !this.cheerBuffers || this.cheerBuffers.length === 0) return;
+    const buf = this.cheerBuffers[Math.floor(Math.random() * this.cheerBuffers.length)];
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start();
   }
 
   playCrush() {
@@ -949,6 +969,7 @@ class GameEngine {
   async init() {
     await Assets.load();
     this.sound.init();
+    this.sound.loadCheerVoices();
     this.lion.x = this.CW / 2;
     this.lion.y = this.CH * 0.55;
   }
