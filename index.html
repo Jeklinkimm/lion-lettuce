@@ -468,6 +468,7 @@ function forceClear() {
   if (!engine.running) return;
   engine.totalEaten = engine.config.clearGoal;
   engine.levelCleared = true;
+  engine.cabbages = [];
   engine.stop();
   engine.gameEnded = true;
   engine.ending.start(engine.score, engine.totalBites, true, engine.level);

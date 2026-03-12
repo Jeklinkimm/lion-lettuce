@@ -1153,6 +1153,7 @@ class GameEngine {
     if (timeUp || goalReached) {
       if (timeUp) this.timeLeft = 0;
       this.levelCleared = goalReached;
+      this.cabbages = [];
       this.stop();
       this.gameEnded = true;
       this.ending.start(this.score, this.totalBites, this.levelCleared, this.level);
