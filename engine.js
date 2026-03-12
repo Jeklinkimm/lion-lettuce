@@ -526,6 +526,7 @@ class Cabbage {
 class Lion {
   constructor() {
     this.x = 480; this.y = 300; this.baseScale = 0.5;
+    this.targetScale = 0.5; // 스무스 스케일링 목표값
     this.jawOpen = 0; this.jawTarget = 0;
     this.jawMaxOffset = 60;
     this.bellyScale = 0; this.maneGlow = 0;
@@ -546,6 +547,8 @@ class Lion {
   }
 
   update(dt) {
+    // 스케일 스무딩 — 덜그럭거리지 않도록 부드럽게 보간
+    this.baseScale += (this.targetScale - this.baseScale) * Math.min(1, 6 * dt);
     // 빠른 스냅 — 닫힐 때 더 빠르게
     const closing = this.jawTarget < this.jawOpen;
     const speed = closing ? 35 : 20;

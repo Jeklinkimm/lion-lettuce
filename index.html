@@ -18,32 +18,30 @@ canvas { display: block; width: 100%; height: 100%; }
 /* 왼쪽: 레벨 뱃지 + 먹은 양배추 패널 */
 .hud-left { display: flex; flex-direction: column; gap: 8px; }
 .hud-level-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  border: 3px solid #c8860a; border-radius: 14px;
-  padding: 4px 14px; box-shadow: 0 3px 0 #b07608, 0 4px 12px rgba(0,0,0,0.3);
-  color: #fff; font-size: 20px; font-weight: 900;
-  text-shadow: 1px 1px 0 #b07608, 0 0 8px rgba(255,165,0,0.4);
+  display: none;
 }
-.hud-level-badge .level-star { font-size: 18px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
+.hud-level-badge .level-star { display: none; }
 .hud-eaten-panel {
-  background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
-  border: 2.5px solid rgba(255,255,255,0.25); border-radius: 16px;
-  padding: 6px 10px; display: flex; gap: 4px; align-items: center;
-  flex-wrap: wrap; max-width: 340px; min-height: 38px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 3px 10px rgba(0,0,0,0.25);
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.25); backdrop-filter: blur(10px);
+  border: 4px solid rgba(255,255,255,0.3); border-radius: 30px;
+  padding: 20px 30px; display: flex; gap: 12px; align-items: center;
+  flex-wrap: wrap; justify-content: center;
+  max-width: 80vw; min-height: 100px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.2), 0 8px 30px rgba(0,0,0,0.4);
+  z-index: 15;
 }
 .eaten-icon {
-  width: 28px; height: 28px; animation: pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  display: inline-block; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); object-fit: contain;
+  width: 80px; height: 80px; animation: pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  display: inline-block; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.5)); object-fit: contain;
   vertical-align: middle;
 }
 .eaten-icon.new { animation: pop-in-big 0.5s cubic-bezier(0.34,1.56,0.64,1); }
 @keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
 @keyframes pop-in-big { 0% { transform: scale(0) rotate(-20deg); } 60% { transform: scale(1.3) rotate(10deg); } 100% { transform: scale(1) rotate(0); } }
 .eaten-count-label {
-  font-size: 15px; color: rgba(255,255,255,0.7); font-weight: 700;
-  margin-left: 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  font-size: 48px; color: rgba(255,255,255,0.9); font-weight: 900;
+  margin-left: 6px; text-shadow: 0 3px 8px rgba(0,0,0,0.5);
 }
 
 /* 오른쪽: 타이머 패널 */
@@ -106,16 +104,16 @@ canvas { display: block; width: 100%; height: 100%; }
   padding: 8px 20px; white-space: nowrap;
 }
 
-/* 포즈 상태 */
+/* 포즈 상태 - 좌하단 작게 */
 .pose-status {
-  position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
-  font-size: 14px; font-weight: 700; padding: 5px 18px; border-radius: 20px;
+  position: absolute; bottom: 12px; left: 12px;
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
   transition: all 0.2s; pointer-events: none;
-  border: 2px solid transparent; backdrop-filter: blur(4px);
+  border: 1.5px solid transparent; backdrop-filter: blur(4px); opacity: 0.7;
 }
 .pose-status.idle { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); border-color: rgba(255,255,255,0.1); }
 .pose-status.ready { background: rgba(90,154,64,0.2); color: #a0d080; border-color: rgba(90,154,64,0.3); }
-.pose-status.detected { background: rgba(90,154,64,0.5); color: #fff; border-color: rgba(160,216,90,0.5); transform: translateX(-50%) scale(1.05); }
+.pose-status.detected { background: rgba(90,154,64,0.5); color: #fff; border-color: rgba(160,216,90,0.5); }
 .pose-status.noperson { background: rgba(255,100,100,0.15); color: rgba(255,150,150,0.7); border-color: rgba(255,100,100,0.2); }
 .start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(160deg, #FFF6E8, #F0FFF6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 30; transition: opacity 0.4s; overflow: hidden; }
 .start-overlay.hidden { opacity: 0; pointer-events: none; }
@@ -266,17 +264,32 @@ function onPoseResults(r) {
   const lm=landmarks, ls=lm[11],rs=lm[12],lw=lm[15],rw=lm[16];
   if (ls.visibility>0.4 && rs.visibility>0.4) {
     engine.lion.x = (1-(ls.x+rs.x)/2)*engine.CW;
-    // 어깨 높이 + 어깨폭 비례 오프셋 → 턱 바로 아래에 사자 입이 위치
+    // 어깨폭(px)에 맞춰 머리 크기 결정
+    const shoulderWidthPx = Math.abs(rs.x-ls.x)*engine.CW;
+    const targetScale = Math.max(0.3, Math.min(2.0, shoulderWidthPx / engine.lion.UPPER_W * 1.3));
+    engine.lion.targetScale = targetScale;
+
+    // 코(landmark 0)로 턱 위치 추정 → 상악 머리 상단이 턱 아래에 오도록 배치
+    const nose = lm[0];
     const shoulderY = (ls.y+rs.y)/2*engine.CH;
-    const shoulderW = Math.abs(rs.x-ls.x);
-    engine.lion.y = shoulderY + shoulderW * engine.CH * 0.15;
-    engine.lion.baseScale = Math.max(0.3, Math.min(0.8, shoulderW*3));
+    let chinY;
+    if (nose && nose.visibility > 0.4) {
+      const noseY = nose.y * engine.CH;
+      // 턱 ≈ 코와 어깨 사이 70% 지점 (목 바로 아래)
+      chinY = noseY + (shoulderY - noseY) * 0.7;
+    } else {
+      chinY = shoulderY - shoulderWidthPx * 0.05;
+    }
+    // lion.y 기준으로 상악 상단 = lion.y - UPPER_H*0.72*sc
+    // 상악 상단이 chinY 바로 아래가 되도록
+    const sc = engine.lion.baseScale;
+    engine.lion.y = chinY + engine.lion.UPPER_H * 0.72 * sc * 0.3;
   }
   const armsVisible = lw.visibility>0.4 && rw.visibility>0.4 && ls.visibility>0.4 && rs.visibility>0.4;
   if (armsVisible) {
     poseDetected = true;
     const avgUp = ((ls.y-lw.y)+(rs.y-rw.y))/2;
-    // 만세 = 입 벌림, 조금이라도 내리면 = 입 스냅 닫힘
+    // 만세 = 입 벌림, W/기본 = 입 닫힘
     const jawAmount = avgUp > 0.12 ? Math.min(1, avgUp/0.2) : 0;
     engine.lion.setJawFromPose(jawAmount);
     const now = performance.now();
@@ -402,6 +415,13 @@ async function initAll() {
   if (cameraReady) await initPose();
   engine._lastTime = performance.now();
   requestAnimationFrame(loop);
+  if (new URLSearchParams(location.search).has('autostart')) {
+    const so = document.getElementById('startOverlay');
+    so.style.transition = 'none';
+    so.style.opacity = '0';
+    so.style.pointerEvents = 'none';
+    beginGame();
+  }
 }
 initAll();
 
