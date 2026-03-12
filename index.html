@@ -150,6 +150,8 @@ canvas { display: block; width: 100%; height: 100%; }
     <div class="hud-top-area">
       <!-- 왼쪽: 레벨 뱃지 + 먹은 양배추 -->
       <div class="eaten-count-label" id="hudEatenCount">0/10</div>
+      <span id="hudEaten" style="display:none"></span>
+      <span id="hudLevel" style="display:none">Lv.1</span>
     </div>
     <!-- 오른쪽: 원형 타이머 (우상단 고정) -->
     <div class="hud-timer-panel">
@@ -260,11 +262,26 @@ function onPoseResults(r) {
   const lm=landmarks, ls=lm[11],rs=lm[12],lw=lm[15],rw=lm[16];
   if (ls.visibility>0.4 && rs.visibility>0.4) {
     engine.lion.x = (1-(ls.x+rs.x)/2)*engine.CW;
-    // 어깨 높이 + 어깨폭 비례 오프셋 → 턱 바로 아래에 사자 입이 위치
+    // 어깨폭(px)에 맞춰 머리 크기 결정
+    const shoulderWidthPx = Math.abs(rs.x-ls.x)*engine.CW;
+    const targetScale = Math.max(0.3, Math.min(2.0, shoulderWidthPx / engine.lion.UPPER_W * 1.3));
+    engine.lion.targetScale = targetScale;
+
+    // 코(landmark 0)로 턱 위치 추정 → 상악 머리 상단이 턱 아래에 오도록 배치
+    const nose = lm[0];
     const shoulderY = (ls.y+rs.y)/2*engine.CH;
-    const shoulderW = Math.abs(rs.x-ls.x);
-    engine.lion.y = shoulderY + shoulderW * engine.CH * 0.15;
-    engine.lion.baseScale = Math.max(0.3, Math.min(0.8, shoulderW*3));
+    let chinY;
+    if (nose && nose.visibility > 0.4) {
+      const noseY = nose.y * engine.CH;
+      // 턱 ≈ 코와 어깨 사이 70% 지점 (목 바로 아래)
+      chinY = noseY + (shoulderY - noseY) * 0.7;
+    } else {
+      chinY = shoulderY - shoulderWidthPx * 0.05;
+    }
+    // lion.y 기준으로 상악 상단 = lion.y - UPPER_H*0.72*sc
+    // 상악 상단이 chinY 바로 아래가 되도록
+    const sc = engine.lion.baseScale;
+    engine.lion.y = chinY + engine.lion.UPPER_H * 0.72 * sc * 0.3;
   }
   const armsVisible = lw.visibility>0.4 && rw.visibility>0.4 && ls.visibility>0.4 && rs.visibility>0.4;
   if (armsVisible) {
