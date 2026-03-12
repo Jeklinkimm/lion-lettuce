@@ -185,6 +185,7 @@ class SoundManager {
   /** 칭찬 음성 로드 (WAV 파일) */
   loadCheerVoices(basePath = 'assets') {
     this.cheerBuffers = [];
+    this.cheerIndex = 0;
     const files = [
       `${basePath}/voice/cheer/voice_cheer_04.wav`,
       `${basePath}/voice/cheer/voice_cheer_07.wav`,
@@ -200,10 +201,11 @@ class SoundManager {
     });
   }
 
-  /** 칭찬 음성 피드백 (녹음된 WAV 랜덤 재생) */
+  /** 칭찬 음성 피드백 (녹음된 WAV 순서대로 재생) */
   playPraise(text) {
     if (!this.ready || !this.cheerBuffers || this.cheerBuffers.length === 0) return;
-    const buf = this.cheerBuffers[Math.floor(Math.random() * this.cheerBuffers.length)];
+    const buf = this.cheerBuffers[this.cheerIndex % this.cheerBuffers.length];
+    this.cheerIndex++;
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
     const gain = this.ctx.createGain();
