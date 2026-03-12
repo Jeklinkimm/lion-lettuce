@@ -237,6 +237,37 @@ class SoundManager {
     src.start();
   }
 
+  /** 룰렛 틱 사운드 — 아이템 하나 넘어갈 때마다 */
+  playSlotTick(pitch) {
+    if (!this.ready) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    const freq = 600 + (pitch || 0) * 200;
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, now + 0.04);
+    g.gain.setValueAtTime(0.18, now);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.05);
+  }
+
+  /** 룰렛 Pick 확정 사운드 */
+  playSlotPick() {
+    if (!this.ready) return;
+    const ctx = this.ctx, now = ctx.currentTime;
+    [880, 1108, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = now + i * 0.06;
+      g.gain.setValueAtTime(0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.3);
+    });
+  }
+
   playCrush() {
     if (!this.ready) return;
     const ctx = this.ctx, now = ctx.currentTime;
@@ -393,6 +424,7 @@ class Cabbage {
     this.spawnTime = performance.now();
     this.dead = false;
     this.opacity = 1; this.scale = 1;
+    this.vegEmoji = null;
     // attract
     this.attractX = 0; this.attractY = 0;
     this.attractTimer = 0;
@@ -501,13 +533,18 @@ class Cabbage {
     ctx.rotate(this.rotation);
     ctx.scale(this.scale*this.crushScaleX*this.squishScale, this.scale*this.crushScaleY*(2-this.squishScale));
     const hs = this.size / 2;
-    ctx.drawImage(img, -hs, -hs, this.size, this.size);
-    if (this.crushState === CABBAGE_STATES.CRUSH1) {
-      ctx.globalAlpha = 0.15; ctx.fillStyle = '#FFD700';
-      ctx.beginPath(); ctx.arc(0, 0, hs*0.75, 0, Math.PI*2); ctx.fill();
-    } else if (this.crushState === CABBAGE_STATES.CRUSH2) {
-      ctx.globalAlpha = 0.2; ctx.fillStyle = '#FF6B35';
-      ctx.beginPath(); ctx.arc(0, 0, hs*0.75, 0, Math.PI*2); ctx.fill();
+    if (this.vegEmoji) {
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetY = 2;
+      const eImg = getEmojiImage(this.vegEmoji, Math.round(this.size * 0.85));
+      const es = eImg.width;
+      ctx.drawImage(eImg, -es / 2, -es / 2, es, es);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+    } else {
+      ctx.drawImage(img, -hs, -hs, this.size, this.size);
     }
     if (this.flashTimer > 0) {
       ctx.globalAlpha = this.flashTimer/0.2*0.6; ctx.fillStyle = '#fff';
@@ -700,12 +737,13 @@ class EndingSystem {
     this.textAlpha = 0;
   }
 
-  start(score, totalBites, levelCleared = false, level = 1) {
+  start(score, totalBites, levelCleared = false, level = 1, selectedVegetable = null) {
     this.active = true;
     this.score = score;
     this.totalBites = totalBites;
     this.levelCleared = levelCleared;
     this.level = level;
+    this.vegEmoji = selectedVegetable ? selectedVegetable.emoji : '🥬';
     this.timer = 0;
     this.spawnTimer = 0;
     this.textAlpha = 0;
@@ -753,7 +791,8 @@ class EndingSystem {
   }
 
   _randomEmoji() {
-    const emojis = ['🥬','⭐','🎉','🎊','💚','✨','🦁','🌟','🏆','💫','🎈','🎀'];
+    const veg = this.vegEmoji || '🥬';
+    const emojis = [veg, veg, veg, '⭐','🎉','🎊','💚','✨','🦁','🌟','🏆','💫'];
     return emojis[Math.floor(Math.random() * emojis.length)];
   }
 
@@ -812,84 +851,61 @@ class EndingSystem {
       ctx.globalAlpha = this.textAlpha;
 
       // 반투명 배경 (더 넓고 진하게)
-      const bgGrad = ctx.createLinearGradient(0, this.CH * 0.1, 0, this.CH * 0.65);
+      const bgGrad = ctx.createLinearGradient(0, this.CH * 0.08, 0, this.CH * 0.72);
       bgGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      bgGrad.addColorStop(0.15, 'rgba(0,0,0,0.5)');
-      bgGrad.addColorStop(0.85, 'rgba(0,0,0,0.5)');
+      bgGrad.addColorStop(0.12, 'rgba(0,0,0,0.5)');
+      bgGrad.addColorStop(0.88, 'rgba(0,0,0,0.5)');
       bgGrad.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, this.CH * 0.1, this.CW, this.CH * 0.55);
+      ctx.fillRect(0, this.CH * 0.08, this.CW, this.CH * 0.64);
 
       const cx = this.CW / 2;
 
-      // 메인 텍스트 (줌인 바운스 등장)
-      const bounce = Math.sin(this.timer * 3) * 4;
-      const titleEase = this.titleScale < 1 ? Math.pow(this.titleScale, 0.5) * 1.2 : 1 + Math.sin(this.timer * 2) * 0.03;
-      ctx.save();
-      ctx.translate(cx, this.CH * 0.24 + bounce);
-      ctx.scale(titleEase, titleEase);
-      // 글로우 이펙트
-      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 20;
-      ctx.fillStyle = '#FFD700';
-      ctx.font = "bold 68px 'Apple SD Gothic Neo', sans-serif";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 5;
-      const titleText = this.levelCleared ? `레벨 ${this.level} 클리어!` : '잘했어요!';
-      ctx.strokeText(titleText, 0, 0);
-      ctx.fillText(titleText, 0, 0);
-      ctx.shadowBlur = 0;
-      ctx.restore();
+      // 이모지 하나씩 등장 + 점수 텍스트
+      if (this.timer > 0.5) {
+        const ds = Math.floor(this.displayScore);
+        const emojiSize = 56;
+        const emojiGap = 64;
+        const totalEmojis = Math.min(ds, this.score);
+        const emojiRowY = this.CH * 0.28;
+        const emojiStartX = cx - (totalEmojis - 1) * emojiGap / 2;
 
-      // 별 등급 표시
-      if (this.timer > 0.4) {
-        const starY = this.CH * 0.33;
-        const starSize = 36;
-        ctx.font = `${starSize}px sans-serif`;
+        // 이모지들 차례대로 팝업
+        ctx.font = `${emojiSize}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        for (let i = 0; i < 3; i++) {
-          const starX = cx + (i - 1) * 50;
-          const delay = 0.4 + i * 0.2;
+        for (let i = 0; i < totalEmojis; i++) {
+          const delay = 0.5 + i * 0.15;
           if (this.timer > delay) {
-            const pop = Math.min(1, (this.timer - delay) * 5);
-            const popScale = pop < 1 ? pop * 1.3 : 1 + Math.sin(this.timer * 4 + i) * 0.05;
+            const pop = Math.min(1, (this.timer - delay) * 6);
+            const popScale = pop < 1 ? pop * 1.3 : 1 + Math.sin(this.timer * 3 + i) * 0.05;
             ctx.save();
-            ctx.translate(starX, starY);
+            ctx.translate(emojiStartX + i * emojiGap, emojiRowY);
             ctx.scale(popScale, popScale);
-            ctx.globalAlpha = this.textAlpha * (i < this.starCount ? 1 : 0.2);
-            ctx.fillText(i < this.starCount ? '⭐' : '☆', 0, 0);
+            ctx.globalAlpha = this.textAlpha;
+            ctx.fillText(this.vegEmoji, 0, 0);
             ctx.restore();
           }
         }
-        ctx.globalAlpha = this.textAlpha;
-      }
 
-      // 점수 (카운트업 애니메이션)
-      if (this.timer > 0.5) {
-        const ds = Math.floor(this.displayScore);
-        ctx.fillStyle = '#fff';
-        ctx.font = "bold 38px 'Apple SD Gothic Neo', sans-serif";
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 6;
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3;
-        const scoreText = `🥬 ${ds}개 먹었어요!`;
-        ctx.strokeText(scoreText, cx, this.CH * 0.42);
-        ctx.fillText(scoreText, cx, this.CH * 0.42);
-        ctx.shadowBlur = 0;
+        // 텍스트
+        const textDelay = 0.5 + totalEmojis * 0.15 + 0.2;
+        if (this.timer > textDelay) {
+          const textAlpha = Math.min(1, (this.timer - textDelay) * 3);
+          ctx.globalAlpha = this.textAlpha * textAlpha;
+          ctx.fillStyle = '#fff';
+          ctx.font = "bold 90px 'Jua', 'Apple SD Gothic Neo', sans-serif";
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 10;
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 5;
+          const scoreText = `${ds}개 먹었어요!`;
+          ctx.strokeText(scoreText, cx, this.CH * 0.43);
+          ctx.fillText(scoreText, cx, this.CH * 0.43);
+          ctx.shadowBlur = 0;
 
-        ctx.font = "600 22px 'Apple SD Gothic Neo', sans-serif";
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        ctx.fillText(`총 ${this.totalBites}번 물었어요`, cx, this.CH * 0.50);
-      }
-
-      // 격려 메시지
-      if (this.timer > 1.5) {
-        const messages = this.levelCleared ? '완벽해요! 다음 레벨로!' : this.score >= 10 ? '대단해요! 최고!' : this.score >= 5 ? '정말 잘했어!' : this.score >= 1 ? '잘했어요!' : '다음엔 더 잘할 수 있어요!';
-        const msgAlpha = Math.min(1, (this.timer - 1.5) * 2);
-        ctx.globalAlpha = this.textAlpha * msgAlpha;
-        ctx.fillStyle = '#FFE8A8';
-        ctx.font = "bold 26px 'Apple SD Gothic Neo', sans-serif";
-        ctx.fillText(messages, cx, this.CH * 0.57);
-        ctx.globalAlpha = this.textAlpha;
+          ctx.font = "600 36px 'Jua', 'Apple SD Gothic Neo', sans-serif";
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillText(`총 ${this.totalBites}번 물었어요`, cx, this.CH * 0.55);
+        }
       }
 
       // 다시하기 안내 (깜빡이)
@@ -898,7 +914,7 @@ class EndingSystem {
         ctx.fillStyle = '#fff';
         ctx.font = "bold 20px 'Apple SD Gothic Neo', sans-serif";
         const restartText = this.levelCleared ? '스페이스바를 눌러 다음 레벨!' : '스페이스바를 눌러 다시 시작!';
-        ctx.fillText(restartText, cx, this.CH * 0.64);
+        ctx.fillText(restartText, cx, this.CH * 0.66);
       }
 
       ctx.restore();
@@ -969,6 +985,234 @@ class ScreenShake {
 }
 
 
+// ─── Vegetable Roulette ─────────────────────────────────────
+const VEGETABLES = [
+  { emoji: '🥕', name: '당근', color: '#FF8C42' },
+  { emoji: '🍅', name: '토마토', color: '#E74C3C' },
+  { emoji: '🌽', name: '옥수수', color: '#F1C40F' },
+  { emoji: '🥦', name: '브로콜리', color: '#27AE60' },
+  { emoji: '🫑', name: '피망', color: '#2ECC71' },
+  { emoji: '🍆', name: '가지', color: '#8E44AD' },
+];
+
+const _emojiCache = {};
+function getEmojiImage(emoji, size) {
+  const key = emoji + '|' + size;
+  if (_emojiCache[key]) return _emojiCache[key];
+  const s = Math.ceil(size * 1.2);
+  const off = document.createElement('canvas');
+  off.width = s; off.height = s;
+  const c = off.getContext('2d');
+  c.font = `${size}px sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(emoji, s / 2, s / 2);
+  _emojiCache[key] = off;
+  return off;
+}
+
+class VegetableRoulette {
+  constructor() {
+    this.active = false;
+    this.timer = 0;
+    this.items = [];
+    this.scrollX = 0;
+    this.speed = 0;
+    this.selectedVeg = null;
+    this.phase = 'idle';
+    this.pickFlash = 0;
+    this.pickScale = 1;
+    this.pickBounce = 0;
+    this.CW = 0; this.CH = 0;
+    this._lastTickIdx = 0;
+    this.sound = null;
+  }
+
+  start(cw, ch) {
+    this.CW = cw; this.CH = ch;
+    this.active = true;
+    this.timer = 0;
+    this.phase = 'rolling';
+    this.selectedVeg = null;
+    this.pickFlash = 0;
+    this.pickScale = 1;
+    this.pickBounce = 0;
+    this._uiFade = 0;
+    this._lastTickIdx = 0;
+    this.items = [];
+    let prev = -1;
+    for (let i = 0; i < 40; i++) {
+      let idx;
+      do { idx = Math.floor(Math.random() * VEGETABLES.length); } while (idx === prev);
+      prev = idx;
+      this.items.push(VEGETABLES[idx]);
+    }
+    const pickIdx = 27;
+    const picked = VEGETABLES[Math.floor(Math.random() * VEGETABLES.length)];
+    this.items[pickIdx] = picked;
+    if (this.items[pickIdx - 1]?.emoji === picked.emoji) {
+      const others = VEGETABLES.filter(v => v.emoji !== picked.emoji);
+      this.items[pickIdx - 1] = others[Math.floor(Math.random() * others.length)];
+    }
+    if (this.items[pickIdx + 1]?.emoji === picked.emoji) {
+      const others = VEGETABLES.filter(v => v.emoji !== picked.emoji);
+      this.items[pickIdx + 1] = others[Math.floor(Math.random() * others.length)];
+    }
+    this._pickIdx = pickIdx;
+    this._picked = picked;
+    this.scrollX = 0;
+    this.speed = 1200;
+    this._itemSize = 90;
+    this._targetScrollX = pickIdx * this._itemSize;
+  }
+
+  update(dt) {
+    if (!this.active) return;
+    this.timer += dt;
+
+    if (this.phase === 'rolling') {
+      if (this.timer < 0.5) {
+        this.speed = 1200 + this.timer * 400;
+      } else {
+        this.phase = 'slowing';
+      }
+      this.scrollX += this.speed * dt;
+    }
+
+    if (this.phase === 'slowing') {
+      const remaining = this._targetScrollX - this.scrollX;
+      if (remaining > 10) {
+        this.speed = Math.max(60, remaining * 2.5);
+        this.scrollX += this.speed * dt;
+      } else {
+        this.scrollX = this._targetScrollX;
+        this.phase = 'picked';
+        this.timer = 0;
+        this.selectedVeg = this._picked;
+        this.pickFlash = 1;
+        this.pickScale = 2.0;
+        if (this.sound) this.sound.playSlotPick();
+      }
+    }
+
+    if (this.phase === 'rolling' || this.phase === 'slowing') {
+      const curIdx = Math.floor(this.scrollX / this._itemSize);
+      if (curIdx > this._lastTickIdx) {
+        this._lastTickIdx = curIdx;
+        if (this.sound) this.sound.playSlotTick(this.phase === 'slowing' ? 1 : 0);
+      }
+    }
+
+    if (this.phase === 'picked') {
+      this.pickFlash = Math.max(0, this.pickFlash - dt * 2);
+      this.pickScale += (2.5 - this.pickScale) * Math.min(1, dt * 3);
+      this.pickBounce = Math.sin(this.timer * 8) * Math.max(0, 1 - this.timer) * 6;
+      this._uiFade = Math.min(1, (this._uiFade || 0) + dt * 2.5);
+      if (this.timer > 1.8) {
+        this.phase = 'done';
+        this.active = false;
+      }
+    }
+  }
+
+  draw(ctx) {
+    if (!this.active) return;
+    const cw = this.CW, ch = this.CH;
+    const cx = cw / 2, cy = ch / 2;
+    const itemSize = this._itemSize;
+    const fade = this._uiFade || 0;
+    const uiAlpha = 1 - fade;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, cw, ch);
+
+    if (uiAlpha > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = uiAlpha;
+      ctx.font = 'bold 36px Jua, sans-serif';
+      ctx.fillStyle = '#FFD700';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 10;
+      ctx.fillText('오늘은 뭘 먹어볼까?', cx, cy - 90);
+      ctx.restore();
+    }
+
+    const stripW = Math.min(420, cw * 0.8);
+    const stripH = 100;
+    const stripX = cx - stripW / 2;
+    const stripY = cy - stripH / 2;
+
+    if (uiAlpha > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = uiAlpha;
+      ctx.beginPath();
+      ctx.roundRect(stripX, stripY, stripW, stripH, 20);
+      ctx.fillStyle = '#FFFDF5';
+      ctx.fill();
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(stripX, stripY, stripW, stripH, 20);
+    ctx.clip();
+    const emojiPx = Math.round(itemSize * 0.7);
+    const halfStrip = stripW / 2 + itemSize;
+    for (let i = 0; i < this.items.length; i++) {
+      if (this.phase === 'picked' && i === this._pickIdx) continue;
+      const x = cx + i * itemSize - this.scrollX;
+      if (x < cx - halfStrip || x > cx + halfStrip) continue;
+      ctx.globalAlpha = this.phase === 'picked' ? uiAlpha : 1;
+      const eImg = getEmojiImage(this.items[i].emoji, emojiPx);
+      const es = eImg.width;
+      ctx.drawImage(eImg, x - es / 2, cy - es / 2, es, es);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (this.phase === 'picked') {
+      ctx.save();
+      if (this.pickFlash > 0) {
+        ctx.globalAlpha = this.pickFlash * 0.4;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.globalAlpha = 1;
+      }
+      ctx.translate(cx, cy + this.pickBounce);
+      ctx.scale(this.pickScale, this.pickScale);
+      const pickImg = getEmojiImage(this.selectedVeg.emoji, Math.round(itemSize * 0.7));
+      const ps = pickImg.width;
+      ctx.drawImage(pickImg, -ps / 2, -ps / 2, ps, ps);
+      ctx.restore();
+    }
+
+    if (uiAlpha > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = uiAlpha;
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = 'rgba(255,215,0,0.5)';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 14, stripY - 10);
+      ctx.lineTo(cx + 14, stripY - 10);
+      ctx.lineTo(cx, stripY + 6);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx - 14, stripY + stripH + 10);
+      ctx.lineTo(cx + 14, stripY + stripH + 10);
+      ctx.lineTo(cx, stripY + stripH - 6);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+
 // ─── Game Engine ────────────────────────────────────────────
 class GameEngine {
   constructor(canvas) {
@@ -987,7 +1231,10 @@ class GameEngine {
     this.running = false; this.paused = false;
     this.gameEnded = false;
     this.flashAlpha = 0; this.flashColor = '#fff';
-    this.config = { cabbageSize: 100, fxIntensity: 1, maxCabbages: 5, spawnWaitSec: 10, clearGoal: 10 };
+    this.config = { cabbageSize: 140, fxIntensity: 1, maxCabbages: 5, spawnWaitSec: 10, clearGoal: 5 };
+    this.roulette = new VegetableRoulette();
+    this.roulette.sound = this.sound;
+    this.selectedVegetable = null;
     this.level = 1;
     this.levelCleared = false;
     this._lastTime = 0;
@@ -1012,7 +1259,9 @@ class GameEngine {
     this._lastTime = performance.now();
     this.ending.stop();
     this.sound.resume(); this.sound.startBGM();
-    this.spawnCabbage();
+    this.selectedVegetable = null;
+    this._rouletteWaiting = true;
+    this.roulette.start(this.CW, this.CH);
   }
 
   stop() {
@@ -1032,7 +1281,9 @@ class GameEngine {
     this._lastTime = performance.now();
     this.ending.stop();
     this.sound.resume(); this.sound.startBGM();
-    this.spawnCabbage();
+    this.selectedVegetable = null;
+    this._rouletteWaiting = true;
+    this.roulette.start(this.CW, this.CH);
   }
 
   spawnCabbage() {
@@ -1042,13 +1293,14 @@ class GameEngine {
     const vx = fromLeft ? (180 + Math.random() * 220) : -(180 + Math.random() * 220);
     const vy = -(120 + Math.random() * 180);
     const c = new Cabbage(startX, startY, vx, vy, this.config.cabbageSize, this.CW, this.CH);
+    if (this.selectedVegetable) c.vegEmoji = this.selectedVegetable.emoji;
     this.cabbages.push(c);
   }
 
   flash(color = '#fff', alpha = 0.3) { this.flashColor = color; this.flashAlpha = alpha; }
 
   tryBite() {
-    if (!this.running || this.paused) return;
+    if (!this.running || this.paused || this._rouletteWaiting) return;
     this.totalBites++;
     this.sound.resume();
     this.lion.snapJaw();
@@ -1061,6 +1313,7 @@ class GameEngine {
     const mouthY = this.lion.y + upperBottom + jawDown * 0.35;
 
     const praisePool = ['잘했어!', '대단해!', '최고야!', '멋져!', '와 잘한다!', '굿!'];
+    const vegIcon = this.selectedVegetable ? this.selectedVegetable.emoji : '🥬';
 
     // 1) 이미 끼여있는 양배추가 있으면 그것을 물기
     let stuck = this.cabbages.find(c => c.isStuck());
@@ -1073,7 +1326,7 @@ class GameEngine {
         this.score++; this.totalEaten++;
         // 최대 타격감 폭발!
         this.particles.emitEat(stuck.x, stuck.y, 5);
-        this.floatingText.add('+1 🥬', stuck.x, stuck.y - 30, '#FFD700', 52);
+        this.floatingText.add('+1 ' + vegIcon, stuck.x, stuck.y - 30, '#FFD700', 52);
         this.sound.playEatComplete();
         this.screenShake.trigger(35, 0.6);
         this.flash('#FFD700', 0.7);
@@ -1092,7 +1345,7 @@ class GameEngine {
         this.screenShake.trigger(16, 0.3);
         this.flash('#fff', 0.3);
         const r = stuck.health;
-        this.floatingText.add(r===2 ? '아삭! 🥬' : '우적! 💥', stuck.x, stuck.y-20, r===2 ? '#8fc98f' : '#FF8C00', 34);
+        this.floatingText.add(r===2 ? '아삭! ' + vegIcon : '우적! 💥', stuck.x, stuck.y-20, r===2 ? '#8fc98f' : '#FF8C00', 34);
       }
       return;
     }
@@ -1117,12 +1370,12 @@ class GameEngine {
     this.sound.playCrush();
     this.screenShake.trigger(6, 0.15);
     this.flash('#fff', 0.12);
-    this.floatingText.add('아삭! 🥬', best.x, best.y-20, '#8fc98f', 30);
+    this.floatingText.add('아삭! ' + vegIcon, best.x, best.y-20, '#8fc98f', 30);
 
     if (fullyEaten) {
       this.score++; this.totalEaten++;
       this.particles.emitEat(best.x, best.y, 5);
-      this.floatingText.add('+1 🥬', best.x, best.y-30, '#FFD700', 52);
+      this.floatingText.add('+1 ' + vegIcon, best.x, best.y-30, '#FFD700', 52);
       this.sound.playEatComplete();
       this.screenShake.trigger(35, 0.6);
       this.flash('#FFD700', 0.7);
@@ -1149,6 +1402,17 @@ class GameEngine {
 
     if (!this.running || this.paused) return;
 
+    // 룰렛 업데이트
+    if (this.roulette.active) {
+      this.roulette.update(dt);
+      if (!this.roulette.active && this.roulette.phase === 'done') {
+        this.selectedVegetable = this.roulette.selectedVeg;
+        this._rouletteWaiting = false;
+        this.spawnCabbage();
+      }
+    }
+    if (this._rouletteWaiting) return;
+
     this.timeLeft -= dt;
     // 게임 종료 조건: 시간 종료 OR 클리어 목표 달성
     const timeUp = this.timeLeft <= 0;
@@ -1159,7 +1423,7 @@ class GameEngine {
       this.cabbages = [];
       this.stop();
       this.gameEnded = true;
-      this.ending.start(this.score, this.totalBites, this.levelCleared, this.level);
+      this.ending.start(this.score, this.totalBites, this.levelCleared, this.level, this.selectedVegetable);
       this.sound.playFanfare();
       this.flash('#FFD700', 0.6);
       this.screenShake.trigger(15, 0.4);
@@ -1225,3 +1489,5 @@ window.ScreenShake = ScreenShake;
 window.EndingSystem = EndingSystem;
 window.CABBAGE_STATES = CABBAGE_STATES;
 window.checkLionCollision = checkLionCollision;
+window.VegetableRoulette = VegetableRoulette;
+window.VEGETABLES = VEGETABLES;
