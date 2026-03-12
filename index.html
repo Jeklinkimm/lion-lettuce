@@ -265,8 +265,11 @@ function onPoseResults(r) {
   const lm=landmarks, ls=lm[11],rs=lm[12],lw=lm[15],rw=lm[16];
   if (ls.visibility>0.4 && rs.visibility>0.4) {
     engine.lion.x = (1-(ls.x+rs.x)/2)*engine.CW;
-    engine.lion.y = (ls.y+rs.y)/2*engine.CH - 20;
-    engine.lion.baseScale = Math.max(0.3, Math.min(0.8, Math.abs(rs.x-ls.x)*3));
+    // 어깨 높이 + 어깨폭 비례 오프셋 → 턱 바로 아래에 사자 입이 위치
+    const shoulderY = (ls.y+rs.y)/2*engine.CH;
+    const shoulderW = Math.abs(rs.x-ls.x);
+    engine.lion.y = shoulderY + shoulderW * engine.CH * 0.15;
+    engine.lion.baseScale = Math.max(0.3, Math.min(0.8, shoulderW*3));
   }
   const armsVisible = lw.visibility>0.4 && rw.visibility>0.4 && ls.visibility>0.4 && rs.visibility>0.4;
   if (armsVisible) {

@@ -486,11 +486,11 @@ class Lion {
     this.jawMaxOffset = 60;
     this.bellyScale = 0; this.maneGlow = 0;
 
-    // 에셋 렌더링 크기 (공유 상수)
-    this.UPPER_W = 300;
-    this.UPPER_H = 300 * (306 / 349);
-    this.LOWER_W = 300;
-    this.LOWER_H = 300 * (151 / 253);
+    // 에셋 렌더링 크기 — 상악 크게, 하악 작게 (귀여운 비율)
+    this.UPPER_W = 340;
+    this.UPPER_H = 340 * (306 / 349);
+    this.LOWER_W = 240;
+    this.LOWER_H = 240 * (151 / 253);
   }
 
   setJawFromPose(openAmount) { this.jawTarget = Math.max(0, Math.min(1, openAmount)); }
@@ -1067,7 +1067,8 @@ class GameEngine {
     const mouthX = bounds.centerX;
     const sc = this.lion.baseScale;
     const jawDown = this.lion.jawOpen * this.lion.jawMaxOffset * sc;
-    const mouthY = this.lion.y + jawDown / 2;
+    const upperBottom = this.lion.UPPER_H * 0.28 * sc;
+    const mouthY = this.lion.y + (upperBottom + jawDown) / 2;
 
     const praisePool = ['잘했어!', '대단해!', '최고야!', '멋져!', '와 잘한다!', '굿!'];
 
@@ -1192,7 +1193,8 @@ class GameEngine {
     for (const c of this.cabbages) {
       if (c.phase === 'stuck') {
         c.x = this.lion.x;
-        c.y = this.lion.y + jawDown / 2;
+        const upperBottom = this.lion.UPPER_H * 0.28 * sc;
+        c.y = this.lion.y + (upperBottom + jawDown) / 2;
       }
       c.update(dt);
     }
