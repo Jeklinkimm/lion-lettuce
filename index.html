@@ -410,9 +410,9 @@ engine.onGameEnd = (score) => {
   document.getElementById('hud').style.display = 'none';
 };
 
-function beginGame() {
+async function beginGame() {
   document.getElementById('startOverlay').classList.add('hidden');
-  engine.sound.resume();
+  await engine.sound.resume();
 
   const overlay = document.getElementById('countdownOverlay');
   const text = document.getElementById('countdownText');

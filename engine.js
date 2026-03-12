@@ -50,8 +50,8 @@ class SoundManager {
     } catch(e) { console.warn('Web Audio not available'); }
   }
 
-  resume() {
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  async resume() {
+    if (this.ctx && this.ctx.state === 'suspended') await this.ctx.resume();
   }
 
   /** 아삭! 첫 물기 사운드 — 양배추를 처음 잡을 때 */
