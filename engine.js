@@ -1246,7 +1246,8 @@ class GameEngine {
     this.sound.loadCheerVoices();
     this.sound.loadReadyVoice();
     this.lion.x = this.CW / 2;
-    this.lion.y = this.CH * 0.65;
+    this.lion.y = this.CH * 0.75;
+    this.lion.baseScale = 0.65;
   }
 
   start() {
