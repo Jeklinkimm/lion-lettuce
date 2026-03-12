@@ -418,23 +418,25 @@ function beginGame() {
   const text = document.getElementById('countdownText');
   overlay.style.display = 'flex';
 
-  // 음성: "준비" 0.2~0.8s, "시작" 1.6~2.5s
+  // WAV 내부: "준비" 0.2~0.8s, "시작" 1.6~2.5s
+  // Web Audio 재생 지연 ~250ms 보정
+  const AUDIO_DELAY = 250;
   engine.sound.playReady();
 
-  // 0.2s: "준비" 텍스트 (음성과 동시)
+  // "준비" 텍스트: WAV 0.2s + 재생지연
   setTimeout(() => {
     text.textContent = '준비';
     text.style.transform = 'scale(1)';
     text.style.opacity = '1';
-  }, 200);
+  }, 200 + AUDIO_DELAY);
 
-  // 1.2s: "준비" 페이드아웃
+  // "준비" 페이드아웃
   setTimeout(() => {
     text.style.transform = 'scale(1.3)';
     text.style.opacity = '0';
-  }, 1200);
+  }, 1200 + AUDIO_DELAY);
 
-  // 1.6s: "시작!" 텍스트 (음성과 동시)
+  // "시작!" 텍스트: WAV 1.6s + 재생지연
   setTimeout(() => {
     text.textContent = '시작!';
     text.style.transition = 'none';
@@ -445,9 +447,9 @@ function beginGame() {
       text.style.transform = 'scale(1)';
       text.style.opacity = '1';
     });
-  }, 1550);
+  }, 1550 + AUDIO_DELAY);
 
-  // 2.6s: 페이드아웃 후 게임 시작
+  // 페이드아웃 후 게임 시작
   setTimeout(() => {
     text.style.transform = 'scale(1.3)';
     text.style.opacity = '0';
@@ -459,7 +461,7 @@ function beginGame() {
     document.getElementById('hudEaten').innerHTML = '';
     engine.timeLeft = 60; engine.totalTime = 60;
     engine.start();
-  }, 2600);
+  }, 2600 + AUDIO_DELAY);
 }
 
 function toggleDebug() { engine.debugMode = !engine.debugMode; showSkeleton = !showSkeleton; }
