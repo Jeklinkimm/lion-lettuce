@@ -356,7 +356,7 @@ function loop(ts) {
   // 레이어 순서: 하악 → 상악 → 양배추 → 파티클
   engine.lion.drawLowerJaw(ctx);
   engine.lion.drawUpperJaw(ctx);
-  for (const c of engine.cabbages) c.draw(ctx);
+  if (!engine.gameEnded) for (const c of engine.cabbages) c.draw(ctx);
   engine.particles.draw(ctx);
   engine.floatingText.draw(ctx);
 
