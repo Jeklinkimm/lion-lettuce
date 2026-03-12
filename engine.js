@@ -734,51 +734,7 @@ class EndingSystem {
       if (c.age >= c.life) this.confetti.splice(i, 1);
     }
 
-    // 지속적으로 떨어지는 조각 스폰 (box2d 스타일)
-    this.spawnTimer += dt;
-    const spawnRate = Math.min(0.02, 0.05 - this.timer * 0.005); // 시간이 갈수록 빨리
-    if (this.spawnTimer > spawnRate) {
-      this.spawnTimer = 0;
-      const col = Math.floor(Math.random() * this.COLS);
-      const colW = this.CW / this.COLS;
-      this.fallingPieces.push({
-        x: col * colW + colW / 2 + (Math.random() - 0.5) * colW * 0.5,
-        y: -20 - Math.random() * 40,
-        vy: 80 + Math.random() * 120,
-        size: 8 + Math.random() * 14,
-        color: this._randomColor(),
-        emoji: Math.random() < 0.4 ? this._randomEmoji() : null,
-        rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 8,
-        col: col,
-        landed: false,
-        landY: 0,
-      });
-    }
-
-    // 떨어지는 조각 업데이트 (바닥에 쌓임)
-    const colW = this.CW / this.COLS;
-    for (const p of this.fallingPieces) {
-      if (p.landed) continue;
-      p.vy += 300 * dt; // gravity
-      p.y += p.vy * dt;
-      p.rotation += p.rotSpeed * dt;
-
-      // 바닥 체크: 화면 바닥 - 쌓인 높이
-      const floorY = this.CH - this.floorMap[p.col];
-      if (p.y >= floorY - p.size / 2) {
-        p.y = floorY - p.size / 2;
-        p.landed = true;
-        p.landY = p.y;
-        p.vy = 0;
-        p.rotSpeed = 0;
-        // 높이맵 업데이트
-        this.floorMap[p.col] += p.size * 0.6;
-        // 양쪽 컬럼에도 약간 전파 (자연스러운 쌓임)
-        if (p.col > 0) this.floorMap[p.col - 1] = Math.max(this.floorMap[p.col - 1], this.floorMap[p.col] * 0.4);
-        if (p.col < this.COLS - 1) this.floorMap[p.col + 1] = Math.max(this.floorMap[p.col + 1], this.floorMap[p.col] * 0.4);
-      }
-    }
+    // (떨어지는 이모티콘 쌓기 제거됨)
   }
 
   draw(ctx) {
@@ -801,22 +757,7 @@ class EndingSystem {
       ctx.restore();
     }
 
-    // 떨어지는/쌓인 조각
-    for (const p of this.fallingPieces) {
-      ctx.save();
-      ctx.globalAlpha = 1;
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.landed ? 0 : p.rotation);
-      if (p.emoji) {
-        ctx.font = `${p.size * 1.5}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(p.emoji, 0, 0);
-      } else {
-        ctx.fillStyle = p.color;
-        ctx.beginPath(); ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.restore();
-    }
+    // (떨어지는 이모티콘 그리기 제거됨)
 
     // 텍스트 오버레이 (드라마틱 연출)
     if (this.textAlpha > 0) {
@@ -1150,6 +1091,13 @@ class GameEngine {
     // 엔딩 업데이트 (게임 끝나도 계속)
     if (this.ending.active) this.ending.update(dt);
 
+    // 게임 끝나도 사자/파티클/쉐이크 계속 업데이트 (화면 freeze 방지)
+    this.lion.update(dt);
+    this.particles.update(dt);
+    this.floatingText.update(dt);
+    this.screenShake.update(dt);
+    if (this.flashAlpha > 0) this.flashAlpha = Math.max(0, this.flashAlpha - dt * 3);
+
     if (!this.running || this.paused) return;
 
     this.timeLeft -= dt;
@@ -1185,25 +1133,18 @@ class GameEngine {
       }
     }
 
-    this.lion.update(dt);
-
     // stuck 양배추는 사자 턱 사이 위치로 고정
     const sc = this.lion.baseScale;
     const jawDown = this.lion.jawOpen * this.lion.jawMaxOffset * sc;
     for (const c of this.cabbages) {
       if (c.phase === 'stuck') {
         c.x = this.lion.x;
-        // 상악 하단과 하악 상단의 정중앙
         const upperBottom = this.lion.UPPER_H * 0.28 * sc;
         c.y = this.lion.y + upperBottom + jawDown * 0.35;
       }
       c.update(dt);
     }
     this.cabbages = this.cabbages.filter(c => !c.dead);
-    this.particles.update(dt);
-    this.floatingText.update(dt);
-    this.screenShake.update(dt);
-    if (this.flashAlpha > 0) this.flashAlpha = Math.max(0, this.flashAlpha - dt * 3);
   }
 
   renderCameraBackground(video) {
