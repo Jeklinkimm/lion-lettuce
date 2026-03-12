@@ -175,6 +175,7 @@ canvas { display: block; width: 100%; height: 100%; }
     <div class="ctrl">
       <button onclick="toggleDebug()">🔧 디버그</button>
       <button onclick="spawnNew()">🥬 추가</button>
+      <button onclick="forceClear()">🏆 강제클리어</button>
     </div>
     <div class="jaw-ctrl">
       <label>하악</label>
@@ -418,6 +419,19 @@ function beginGame() {
 
 function toggleDebug() { engine.debugMode = !engine.debugMode; showSkeleton = !showSkeleton; }
 function spawnNew() { engine.spawnCabbage(); }
+function forceClear() {
+  if (!engine.running) return;
+  engine.totalEaten = engine.config.clearGoal;
+  engine.levelCleared = true;
+  engine.stop();
+  engine.gameEnded = true;
+  engine.ending.start(engine.score, engine.totalBites, true, engine.level);
+  engine.sound.playFanfare();
+  engine.flash('#FFD700', 0.6);
+  engine.screenShake.trigger(15, 0.4);
+  setTimeout(() => engine.sound.playPraise('레벨 클리어! 대단해!'), 800);
+  if (engine.onGameEnd) engine.onGameEnd(engine.score, true);
+}
 
 // ─── Input ───
 addEventListener('keydown', e => {
