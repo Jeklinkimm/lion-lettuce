@@ -292,7 +292,7 @@ function onPoseResults(r) {
     engine.lion.x = (1-(ls.x+rs.x)/2)*engine.CW;
     // 어깨폭(px)에 맞춰 머리 크기 결정
     const shoulderWidthPx = Math.abs(rs.x-ls.x)*engine.CW;
-    const targetScale = Math.max(0.5, Math.min(2.5, shoulderWidthPx / engine.lion.UPPER_W * 1.8));
+    const targetScale = Math.max(0.6, Math.min(3.0, shoulderWidthPx / engine.lion.UPPER_W * 2.3));
     engine.lion.targetScale = targetScale;
 
     // 코(landmark 0)로 턱 위치 추정 → 상악 머리 상단이 턱 아래에 오도록 배치
@@ -302,14 +302,14 @@ function onPoseResults(r) {
     if (nose && nose.visibility > 0.4) {
       const noseY = nose.y * engine.CH;
       // 턱 ≈ 코와 어깨 사이 70% 지점 (목 바로 아래)
-      chinY = noseY + (shoulderY - noseY) * 0.7;
+      chinY = noseY + (shoulderY - noseY) * 1.0;
     } else {
       chinY = shoulderY - shoulderWidthPx * 0.05;
     }
     // lion.y 기준으로 상악 상단 = lion.y - UPPER_H*0.72*sc
     // 상악 상단이 chinY 바로 아래가 되도록
     const sc = engine.lion.baseScale;
-    engine.lion.y = chinY + engine.lion.UPPER_H * 0.72 * sc * 0.55;
+    engine.lion.y = chinY + engine.lion.UPPER_H * 0.72 * sc * 0.9;
   }
   const armsVisible = lw.visibility>0.4 && rw.visibility>0.4 && ls.visibility>0.4 && rs.visibility>0.4;
   if (armsVisible) {
