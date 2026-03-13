@@ -309,7 +309,7 @@ function onPoseResults(r) {
     // lion.y 기준으로 상악 상단 = lion.y - UPPER_H*0.72*sc
     // 상악 상단이 chinY 바로 아래가 되도록
     const sc = engine.lion.baseScale;
-    engine.lion.y = chinY + engine.lion.UPPER_H * 0.72 * sc * 0.4;
+    engine.lion.y = chinY + engine.lion.UPPER_H * 0.72 * sc * 0.55;
   }
   const armsVisible = lw.visibility>0.4 && rw.visibility>0.4 && ls.visibility>0.4 && rs.visibility>0.4;
   if (armsVisible) {
