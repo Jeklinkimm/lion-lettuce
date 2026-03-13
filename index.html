@@ -302,7 +302,7 @@ function onPoseResults(r) {
     if (nose && nose.visibility > 0.4) {
       const noseY = nose.y * engine.CH;
       // 턱 ≈ 코와 어깨 사이 70% 지점 (목 바로 아래)
-      chinY = noseY + (shoulderY - noseY) * 0.5;
+      chinY = noseY + (shoulderY - noseY) * 0.6;
     } else {
       chinY = shoulderY - shoulderWidthPx * 0.05;
     }
