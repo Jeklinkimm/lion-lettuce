@@ -586,7 +586,7 @@ class Lion {
     this.x = 480; this.y = 300; this.baseScale = 0.9;
     this.targetScale = 0.9; // 스무스 스케일링 목표값
     this.jawOpen = 0; this.jawTarget = 0;
-    this.jawMaxOffset = 60;
+    this.jawMaxOffset = 160;
     this.bellyScale = 0; this.maneGlow = 0;
 
     // 에셋 렌더링 크기 — 상악 크게, 하악 작게 (귀여운 비율)
