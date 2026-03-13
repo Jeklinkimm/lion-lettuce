@@ -316,11 +316,13 @@ function onPoseResults(r) {
     poseDetected = true;
     const avgUp = ((ls.y-lw.y)+(rs.y-rw.y))/2;
     // 팔 조금만 올려도 입 벌림 (임계값 낮춤)
-    const jawAmount = avgUp > 0.04 ? Math.min(1, avgUp/0.12) : 0;
+    const jawAmount = avgUp > 0.02 ? Math.min(1, avgUp/0.10) : 0;
     engine.lion.setJawFromPose(jawAmount);
     const now = performance.now();
-    // 팔 내리면 바로 물기 (작은 동작도 인식)
-    if (prevJawOpen>=0.15 && jawAmount<=0.05 && now-lastBiteTime>400 && engine.running) { engine.tryBite(); lastBiteTime=now; }
+    // 물기 인식: 절대값 드롭 OR 상대적 드롭 (깊은W→얕은W)
+    const dropped = prevJawOpen - jawAmount;
+    const biteTrigger = (prevJawOpen>=0.1 && dropped>=0.12) || (prevJawOpen>=0.15 && jawAmount<=0.08);
+    if (biteTrigger && now-lastBiteTime>350 && engine.running) { engine.tryBite(); lastBiteTime=now; }
     prevJawOpen = jawAmount;
   } else { poseDetected=false; engine.lion.setJawFromPose(0); prevJawOpen=0; }
 }
