@@ -1089,7 +1089,7 @@ class GameEngine {
     this.sound.loadReadyVoice();
     this.sound.loadFoodVoices();
     this.lion.x = this.CW / 2;
-    this.lion.y = this.CH * 0.78;
+    this.lion.y = this.CH * 0.55;
   }
 
   start() {
