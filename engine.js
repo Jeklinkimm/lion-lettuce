@@ -583,8 +583,8 @@ class Cabbage {
 // ─── Lion (Split-Jaw) ───────────────────────────────────────
 class Lion {
   constructor() {
-    this.x = 480; this.y = 300; this.baseScale = 0.5;
-    this.targetScale = 0.5; // 스무스 스케일링 목표값
+    this.x = 480; this.y = 300; this.baseScale = 0.7;
+    this.targetScale = 0.7; // 스무스 스케일링 목표값
     this.jawOpen = 0; this.jawTarget = 0;
     this.jawMaxOffset = 60;
     this.bellyScale = 0; this.maneGlow = 0;
@@ -1086,7 +1086,7 @@ class GameEngine {
     this.sound.loadReadyVoice();
     this.sound.loadFoodVoices();
     this.lion.x = this.CW / 2;
-    this.lion.y = this.CH * 0.65;
+    this.lion.y = this.CH * 0.72;
   }
 
   start() {
