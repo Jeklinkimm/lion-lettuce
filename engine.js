@@ -583,11 +583,10 @@ class Cabbage {
 // ─── Lion (Split-Jaw) ───────────────────────────────────────
 class Lion {
   constructor() {
-    this.x = 480; this.y = 300; this.baseScale = 0.9;
-    this.targetScale = 0.9; // 스무스 스케일링 목표값
+    this.x = 480; this.y = 300; this.baseScale = 0.5;
+    this.targetScale = 0.5; // 스무스 스케일링 목표값
     this.jawOpen = 0; this.jawTarget = 0;
-    this.jawMaxOffset = 110;
-    this.upperJawLift = 25; // 상악이 위로 올라가는 최대 px
+    this.jawMaxOffset = 60;
     this.bellyScale = 0; this.maneGlow = 0;
 
     // 에셋 렌더링 크기 — 상악 크게, 하악 작게 (귀여운 비율)
@@ -640,9 +639,8 @@ class Lion {
   drawUpperJaw(ctx) {
     if (!Assets.lion.upper) return;
     const sc = this.baseScale;
-    const lift = this.jawOpen * this.upperJawLift; // 입 벌릴 때 상악 위로
     ctx.save();
-    ctx.translate(this.x, this.y - lift * sc);
+    ctx.translate(this.x, this.y);
     ctx.scale(sc, sc);
     if (this.maneGlow > 0) { ctx.shadowColor = 'rgba(255,220,80,0.6)'; ctx.shadowBlur = 30 * this.maneGlow; }
     ctx.drawImage(Assets.lion.upper, -this.UPPER_W/2, -this.UPPER_H * 0.72, this.UPPER_W, this.UPPER_H);
@@ -657,8 +655,7 @@ class Lion {
     const sc = this.baseScale;
     const jawDown = this.jawOpen * this.jawMaxOffset * sc;
     const w = Math.max(this.UPPER_W, this.LOWER_W) * sc;
-    const lift = this.jawOpen * this.upperJawLift * sc;
-    const top = this.y - lift - this.UPPER_H * 0.72 * sc;
+    const top = this.y - this.UPPER_H * 0.72 * sc;
     const bottom = this.y + jawDown + this.LOWER_H * sc;
     return {
       left: this.x - w / 2,
@@ -888,8 +885,8 @@ class EndingSystem {
       // 이모지 하나씩 등장 + 점수 텍스트
       if (this.timer > 0.5) {
         const ds = Math.floor(this.displayScore);
-        const emojiSize = 112;
-        const emojiGap = 120;
+        const emojiSize = 56;
+        const emojiGap = 64;
         const totalEmojis = Math.min(ds, this.score);
         const emojiRowY = this.CH * 0.28;
         const emojiStartX = cx - (totalEmojis - 1) * emojiGap / 2;
@@ -1089,7 +1086,7 @@ class GameEngine {
     this.sound.loadReadyVoice();
     this.sound.loadFoodVoices();
     this.lion.x = this.CW / 2;
-    this.lion.y = this.CH * 0.55;
+    this.lion.y = this.CH * 0.65;
   }
 
   start() {
