@@ -586,7 +586,8 @@ class Lion {
     this.x = 480; this.y = 300; this.baseScale = 0.9;
     this.targetScale = 0.9; // 스무스 스케일링 목표값
     this.jawOpen = 0; this.jawTarget = 0;
-    this.jawMaxOffset = 120;
+    this.jawMaxOffset = 150;
+    this.upperJawLift = 40; // 상악이 위로 올라가는 최대 px
     this.bellyScale = 0; this.maneGlow = 0;
 
     // 에셋 렌더링 크기 — 상악 크게, 하악 작게 (귀여운 비율)
@@ -639,8 +640,9 @@ class Lion {
   drawUpperJaw(ctx) {
     if (!Assets.lion.upper) return;
     const sc = this.baseScale;
+    const lift = this.jawOpen * this.upperJawLift; // 입 벌릴 때 상악 위로
     ctx.save();
-    ctx.translate(this.x, this.y);
+    ctx.translate(this.x, this.y - lift * sc);
     ctx.scale(sc, sc);
     if (this.maneGlow > 0) { ctx.shadowColor = 'rgba(255,220,80,0.6)'; ctx.shadowBlur = 30 * this.maneGlow; }
     ctx.drawImage(Assets.lion.upper, -this.UPPER_W/2, -this.UPPER_H * 0.72, this.UPPER_W, this.UPPER_H);
@@ -655,7 +657,8 @@ class Lion {
     const sc = this.baseScale;
     const jawDown = this.jawOpen * this.jawMaxOffset * sc;
     const w = Math.max(this.UPPER_W, this.LOWER_W) * sc;
-    const top = this.y - this.UPPER_H * 0.72 * sc;
+    const lift = this.jawOpen * this.upperJawLift * sc;
+    const top = this.y - lift - this.UPPER_H * 0.72 * sc;
     const bottom = this.y + jawDown + this.LOWER_H * sc;
     return {
       left: this.x - w / 2,
