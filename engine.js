@@ -586,7 +586,7 @@ class Lion {
     this.x = 480; this.y = 300; this.baseScale = 0.9;
     this.targetScale = 0.9; // 스무스 스케일링 목표값
     this.jawOpen = 0; this.jawTarget = 0;
-    this.jawMaxOffset = 160;
+    this.jawMaxOffset = 120;
     this.bellyScale = 0; this.maneGlow = 0;
 
     // 에셋 렌더링 크기 — 상악 크게, 하악 작게 (귀여운 비율)
@@ -885,8 +885,8 @@ class EndingSystem {
       // 이모지 하나씩 등장 + 점수 텍스트
       if (this.timer > 0.5) {
         const ds = Math.floor(this.displayScore);
-        const emojiSize = 56;
-        const emojiGap = 64;
+        const emojiSize = 112;
+        const emojiGap = 120;
         const totalEmojis = Math.min(ds, this.score);
         const emojiRowY = this.CH * 0.28;
         const emojiStartX = cx - (totalEmojis - 1) * emojiGap / 2;
