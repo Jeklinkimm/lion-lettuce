@@ -257,7 +257,7 @@ async function startCamera() {
 
 // ─── MediaPipe Pose ───
 let pose=null, poseAvailable=false, poseBusy=false, landmarks=null, personBBox=null;
-let poseDetected=false, prevJawOpen=0, lastBiteTime=0;
+let poseDetected=false, prevJawOpen=0, lastBiteTime=0, prevWristY=null;
 
 function loadScript(url) {
   return new Promise((res,rej) => { const s=document.createElement('script'); s.src=url; s.crossOrigin='anonymous'; s.onload=res; s.onerror=()=>rej(new Error('load fail: '+url)); document.head.appendChild(s); });
@@ -314,17 +314,30 @@ function onPoseResults(r) {
   const armsVisible = lw.visibility>0.4 && rw.visibility>0.4 && ls.visibility>0.4 && rs.visibility>0.4;
   if (armsVisible) {
     poseDetected = true;
-    const avgUp = ((ls.y-lw.y)+(rs.y-rw.y))/2;
-    // 팔 조금만 올려도 입 벌림 (임계값 낮춤)
-    const jawAmount = avgUp > 0.02 ? Math.min(1, avgUp/0.10) : 0;
+    // 손목 평균 Y (normalized, 낮을수록 위)
+    const avgWristY = (lw.y + rw.y) / 2;
+    const avgShoulderY = (ls.y + rs.y) / 2;
+    // 어깨 대비 손목 높이 (양수 = 위, 음수 = 아래)
+    const relUp = avgShoulderY - avgWristY;
+    // 입 벌림: 손목이 어깨 근처~위면 벌림 (권투자세도 포함)
+    const jawAmount = relUp > -0.05 ? Math.min(1, (relUp + 0.05) / 0.12) : 0;
     engine.lion.setJawFromPose(jawAmount);
     const now = performance.now();
-    // 물기 인식: 절대값 드롭 OR 상대적 드롭 (깊은W→얕은W)
-    const dropped = prevJawOpen - jawAmount;
-    const biteTrigger = (prevJawOpen>=0.1 && dropped>=0.12) || (prevJawOpen>=0.15 && jawAmount<=0.08);
-    if (biteTrigger && now-lastBiteTime>350 && engine.running) { engine.tryBite(); lastBiteTime=now; }
+    // 물기 인식: 손목 Y의 상대적 하강 감지
+    if (prevWristY !== null) {
+      const wristDrop = avgWristY - prevWristY; // 양수 = 손목이 내려감
+      const jawDrop = prevJawOpen - jawAmount;
+      const biteTrigger =
+        (wristDrop > 0.015 && prevJawOpen > 0.08) ||  // 손목 살짝만 내려가도
+        (jawDrop > 0.08 && prevJawOpen > 0.1) ||       // jaw 값 드롭
+        (prevJawOpen >= 0.12 && jawAmount <= 0.06);     // 기존 절대값 방식
+      if (biteTrigger && now - lastBiteTime > 300 && engine.running) {
+        engine.tryBite(); lastBiteTime = now;
+      }
+    }
+    prevWristY = avgWristY;
     prevJawOpen = jawAmount;
-  } else { poseDetected=false; engine.lion.setJawFromPose(0); prevJawOpen=0; }
+  } else { poseDetected=false; engine.lion.setJawFromPose(0); prevJawOpen=0; prevWristY=null; }
 }
 
 // ─── Skeleton debug ───
