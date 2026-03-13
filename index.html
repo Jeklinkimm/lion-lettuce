@@ -26,25 +26,27 @@ canvas { display: block; width: 100%; height: 100%; }
   text-shadow: 1px 1px 0 #b07608, 0 0 8px rgba(255,165,0,0.4);
 }
 .hud-level-badge .level-star { font-size: 18px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-.hud-eaten-panel {
-  background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
-  border: 2.5px solid rgba(255,255,255,0.25); border-radius: 16px;
-  padding: 10px 14px; display: flex; gap: 6px; align-items: center;
-  flex-wrap: wrap; max-width: 400px; min-height: 50px; justify-content: center;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 3px 10px rgba(0,0,0,0.25);
+/* 프로그래스 (5개 이모지) */
+.hud-progress {
+  display: flex; gap: 12px; align-items: center;
+  background: none; border: none; padding: 0;
+  box-shadow: none;
 }
-.eaten-icon {
-  width: 48px; height: 48px; animation: pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  display: inline-block; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); object-fit: contain;
-  vertical-align: middle;
+.progress-dot {
+  font-size: 56px; line-height: 1; width: 64px; height: 64px;
+  text-align: center; transition: filter 0.3s, transform 0.3s;
+  filter: grayscale(1) brightness(0.35) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  transform: scale(0.8);
 }
-.eaten-icon.new { animation: pop-in-big 0.5s cubic-bezier(0.34,1.56,0.64,1); }
-@keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
-@keyframes pop-in-big { 0% { transform: scale(0) rotate(-20deg); } 60% { transform: scale(1.3) rotate(10deg); } 100% { transform: scale(1) rotate(0); } }
-.eaten-count-label {
-  font-size: 48px; color: #fff; font-weight: 900;
-  text-shadow: 0 3px 6px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.3);
-  -webkit-text-stroke: 2px rgba(0,0,0,0.2);
+.progress-dot.lit {
+  filter: drop-shadow(0 3px 10px rgba(255,215,0,0.6));
+  transform: scale(1);
+  animation: progress-pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes progress-pop {
+  0% { transform: scale(0.5) rotate(-15deg); }
+  50% { transform: scale(1.4) rotate(8deg); }
+  100% { transform: scale(1) rotate(0); }
 }
 
 /* 오른쪽: 타이머 패널 (우상단 고정) */
@@ -70,24 +72,40 @@ canvas { display: block; width: 100%; height: 100%; }
 @keyframes pulse-text { from { transform: translate(-50%,-50%) scale(1); } to { transform: translate(-50%,-50%) scale(1.12); } }
 .timer-label { font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 
-/* 하단 중앙: HP 표시 (하트 스타일) */
-.hud-hp {
-  position: absolute; bottom: 12px; left: 12px;
-  display: flex; gap: 6px;
-  background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
-  border: 2.5px solid rgba(255,255,255,0.2); border-radius: 16px;
-  padding: 6px 12px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+/* 음식 선택 화면 */
+.food-select-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(6px);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 35; gap: 2vh; padding: 2vh 5vw;
 }
-.hud-hp-dot {
-  width: 32px; height: 32px;
-  font-family: 'Jua', sans-serif; font-size: 22px; font-weight: 900;
-  text-align: center; line-height: 32px; color: #fff;
-  border-radius: 50%;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+.food-select-title {
+  font-size: clamp(48px, 8vh, 80px); font-weight: 900; color: #FFD700;
+  text-shadow: 0 4px 0 rgba(0,0,0,0.3), 0 0 30px rgba(255,215,0,0.3);
 }
-.hud-hp-dot.full { background: rgba(90,154,64,0.8); }
-.hud-hp-dot.empty { opacity: 0.3; }
+.food-select-grid {
+  display: flex; flex-direction: column; gap: 2.5vh;
+  width: auto;
+}
+.food-group { display: flex; align-items: center; gap: clamp(12px, 2vw, 24px); }
+.food-group-label {
+  font-size: clamp(32px, 5vh, 48px); font-weight: 900; color: rgba(255,255,255,0.6);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  white-space: nowrap; width: 2.5em; text-align: center; flex-shrink: 0;
+}
+.food-group-items {
+  display: flex; flex-wrap: nowrap; gap: clamp(8px, 1.2vw, 14px);
+}
+.food-btn {
+  font-size: clamp(56px, 10vh, 96px); line-height: 1;
+  width: clamp(80px, 14vh, 130px); height: clamp(80px, 14vh, 130px);
+  background: rgba(255,255,255,0.12); border: 3px solid rgba(255,255,255,0.15);
+  border-radius: 24px; cursor: pointer;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.food-btn:hover { transform: scale(1.12); background: rgba(255,255,255,0.25); border-color: #FFD700; box-shadow: 0 0 16px rgba(255,215,0,0.4); }
+.food-btn:active { transform: scale(0.92); }
 
 /* 컨트롤 버튼 */
 .ctrl { position: absolute; bottom: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; pointer-events: all; }
@@ -151,26 +169,21 @@ canvas { display: block; width: 100%; height: 100%; }
   <div class="hud" id="hud" style="display:none">
     <div class="hud-top-area">
       <div class="hud-left">
-        <div class="hud-eaten-panel">
-          <span id="hudEaten"></span>
-          <div class="eaten-count-label" id="hudEatenCount">0/10</div>
+        <div class="hud-progress" id="hudProgress"></div>
+      </div>
+      <div class="hud-timer-panel">
+        <div class="hud-timer-ring">
+          <svg viewBox="0 0 80 80">
+            <circle class="timer-ring-bg" cx="40" cy="40" r="34"/>
+            <circle class="timer-ring-fill" id="timerRing" cx="40" cy="40" r="34"
+              stroke-dasharray="213.6" stroke-dashoffset="0"/>
+          </svg>
+          <div class="hud-timer-num" id="hudTimerNum">60</div>
         </div>
       </div>
     </div>
-    <!-- 오른쪽: 원형 타이머 (우상단 고정) -->
-    <div class="hud-timer-panel">
-      <div class="hud-timer-ring">
-        <svg viewBox="0 0 80 80">
-          <circle class="timer-ring-bg" cx="40" cy="40" r="34"/>
-          <circle class="timer-ring-fill" id="timerRing" cx="40" cy="40" r="34"
-            stroke-dasharray="213.6" stroke-dashoffset="0"/>
-        </svg>
-        <div class="hud-timer-num" id="hudTimerNum">60</div>
-      </div>
-    </div>
-    <div class="hud-hp" id="hudHp"></div>
     <div class="pose-status idle" id="poseStatus">대기 중</div>
-    <div class="hint">🦁 만세 → 입 벌림 · 팔 내리면 와구! (3번 물면 터짐!)</div>
+    <div class="hint">🦁 만세 → 입 벌림 · 팔 내리면 와구! (2번 물면 터짐!)</div>
     <div class="ctrl">
       <button onclick="toggleDebug()">🔧 디버그</button>
       <button onclick="spawnNew()">🥬 추가</button>
@@ -181,6 +194,12 @@ canvas { display: block; width: 100%; height: 100%; }
       <input type="range" id="jawSlider" min="0" max="100" value="0" orient="vertical"
              oninput="engine.lion.setJawFromPose(this.value/100)">
     </div>
+  </div>
+
+  <!-- 음식 선택 화면 -->
+  <div class="food-select-overlay" id="foodSelectOverlay">
+    <div class="food-select-title">오늘은 뭘 먹어볼까?</div>
+    <div class="food-select-grid" id="foodSelectGrid"></div>
   </div>
 
   <div class="start-overlay" id="startOverlay">
@@ -215,7 +234,6 @@ function resize() {
   if (engine) {
     engine.CW = vw; engine.CH = vh;
     engine.ending.CW = vw; engine.ending.CH = vh;
-    engine.roulette.CW = vw; engine.roulette.CH = vh;
   }
 }
 addEventListener('resize', resize); resize();
@@ -321,18 +339,6 @@ function updatePoseStatus() {
   else if(poseDetected){el.className='pose-status detected';el.textContent='팔 인식 중';}
   else{el.className='pose-status ready';el.textContent='팔을 올려보세요';}
 }
-function updateHpDots() {
-  const el=document.getElementById('hudHp');
-  const a = engine.cabbages.find(c=>c.phase==='exploding') || engine.cabbages.find(c=>c.isStuck()) || engine.cabbages.find(c=>c.isEdible());
-  let bites;
-  if (a) { bites = a.phase==='exploding' ? 3 : Math.max(3 - a.health, 0); }
-  else { bites = Number(el.dataset.bites) || 0; }
-  const prev = el.dataset.bites;
-  if (prev === String(bites)) return;
-  el.dataset.bites = bites;
-  let h=''; for(let i=0;i<3;i++) h+=`<div class="hud-hp-dot ${i<bites?'full':'empty'}">${i+1}</div>`;
-  el.innerHTML=h;
-}
 function updateTimerBar() {
   const ring=document.getElementById('timerRing'), num=document.getElementById('hudTimerNum');
   if(!ring||!num) return;
@@ -344,19 +350,22 @@ function updateTimerBar() {
   if(urgent){ring.classList.add('urgent');num.classList.add('urgent');}
   else{ring.classList.remove('urgent');num.classList.remove('urgent');}
 }
-function updateEatenIcons() {
-  const c=document.getElementById('hudEaten'), count=engine.totalEaten;
-  if(count!==prevEatenCount){
-    const veg = engine.selectedVegetable;
-    let h='';
-    for(let i=0;i<count;i++){
-      const n=i===count-1&&count>prevEatenCount;
-      if (veg) { h+=`<span class="eaten-icon${n?' new':''}" style="font-size:48px;line-height:48px;">${veg.emoji}</span>`; }
-      else { h+=`<img class="eaten-icon${n?' new':''}" src="assets/lettuce/lettuce_normal.png" alt="🥬">`; }
+function updateProgress() {
+  const el = document.getElementById('hudProgress');
+  const count = engine.totalEaten;
+  const goal = engine.config.clearGoal;
+  const emoji = engine.selectedVegetable ? engine.selectedVegetable.emoji : '🥬';
+  if (count !== prevEatenCount || !el.dataset.init) {
+    let h = '';
+    for (let i = 0; i < goal; i++) {
+      const lit = i < count;
+      const isNew = lit && i === count - 1 && count > prevEatenCount;
+      h += `<div class="progress-dot${lit ? ' lit' : ''}${isNew ? ' new' : ''}">${emoji}</div>`;
     }
-    c.innerHTML=h; prevEatenCount=count;
+    el.innerHTML = h;
+    el.dataset.init = '1';
+    prevEatenCount = count;
   }
-  document.getElementById('hudEatenCount').textContent = count + '/' + engine.config.clearGoal;
 }
 
 // ─── Game loop ───
@@ -404,9 +413,6 @@ function loop(ts) {
     }
   }
 
-  // 룰렛 (캔버스 위에 직접 그림)
-  engine.roulette.draw(ctx);
-
   // 엔딩 (캔버스 위에 직접 그림)
   engine.ending.draw(ctx);
 
@@ -414,7 +420,7 @@ function loop(ts) {
 
   // HUD (엔딩 중에는 숨김)
   if (engine.running) {
-    updateTimerBar(); updateEatenIcons(); updateHpDots(); updatePoseStatus();
+    updateTimerBar(); updateProgress(); updatePoseStatus();
   }
 
   requestAnimationFrame(loop);
@@ -431,42 +437,67 @@ async function initAll() {
 initAll();
 
 engine.onGameEnd = (score) => {
-  // HUD 숨기기 (엔딩은 캔버스에 직접 그림 — DOM 오버레이 없음)
   document.getElementById('hud').style.display = 'none';
 };
 
-async function beginGame() {
-  document.getElementById('startOverlay').classList.add('hidden');
-  await engine.sound.resume();
+// 음식 선택 UI
+engine.onShowFoodSelect = () => {
+  const overlay = document.getElementById('foodSelectOverlay');
+  const grid = document.getElementById('foodSelectGrid');
+  grid.innerHTML = '';
+  FOOD_GROUPS.forEach(group => {
+    const row = document.createElement('div');
+    row.className = 'food-group';
+    const label = document.createElement('div');
+    label.className = 'food-group-label';
+    label.textContent = group.label;
+    row.appendChild(label);
+    const items = document.createElement('div');
+    items.className = 'food-group-items';
+    group.items.forEach(food => {
+      const btn = document.createElement('button');
+      btn.className = 'food-btn';
+      btn.textContent = food.emoji;
+      btn.title = food.name;
+      btn.onclick = () => {
+        overlay.style.display = 'none';
+        engine.selectFood(food);
+        prevEatenCount = -1;
+        updateProgress();
+        // 선택 후 카운트다운 → 게임 시작
+        playCountdownAndStart();
+      };
+      items.appendChild(btn);
+    });
+    row.appendChild(items);
+    grid.appendChild(row);
+  });
+  overlay.style.display = 'flex';
+};
 
-  // 카운트다운 중에도 인게임 HUD 표시
+function playCountdownAndStart() {
   document.getElementById('hud').style.display = 'block';
-  prevEatenCount = 0;
-  document.getElementById('hudEaten').innerHTML = '';
+  prevEatenCount = -1;
   engine.timeLeft = 60; engine.totalTime = 60;
-  updateTimerBar(); updateEatenIcons();
+  updateTimerBar(); updateProgress();
 
   const overlay = document.getElementById('countdownOverlay');
   const text = document.getElementById('countdownText');
   overlay.style.display = 'flex';
 
-  // 오디오 먼저, 텍스트는 소리가 들린 후 표시
   engine.sound.playReady();
 
-  // 0.5s: 소리 "준비" 들린 후 텍스트
   setTimeout(() => {
     text.textContent = '준비';
     text.style.transform = 'scale(1)';
     text.style.opacity = '1';
   }, 500);
 
-  // 1.4s: "준비" 페이드아웃
   setTimeout(() => {
     text.style.transform = 'scale(1.3)';
     text.style.opacity = '0';
   }, 1400);
 
-  // 2.0s: 소리 "시작" 들린 후 텍스트
   setTimeout(() => {
     text.textContent = '시작!';
     text.style.transition = 'none';
@@ -479,15 +510,19 @@ async function beginGame() {
     });
   }, 2000);
 
-  // 2.9s: 페이드아웃 후 게임 시작
   setTimeout(() => {
     text.style.transform = 'scale(1.3)';
     text.style.opacity = '0';
-    setTimeout(() => {
-      overlay.style.display = 'none';
-    }, 400);
-    engine.start();
+    setTimeout(() => { overlay.style.display = 'none'; }, 400);
+    engine.startGame();
   }, 2900);
+}
+
+async function beginGame() {
+  document.getElementById('startOverlay').classList.add('hidden');
+  await engine.sound.resume();
+  // 먼저 음식 선택 → 선택 후 카운트다운 시작
+  engine.showFoodSelect();
 }
 
 function toggleDebug() { engine.debugMode = !engine.debugMode; showSkeleton = !showSkeleton; }
@@ -512,21 +547,18 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'Enter') {
     if (engine.gameEnded) {
       if (engine.levelCleared) {
-        // 레벨 클리어 → 다음 레벨
+        // 레벨 클리어 → 음식 선택 → 카운트다운 → 다음 레벨
         prevEatenCount = 0;
-        document.getElementById('hudEaten').innerHTML = '';
-        document.getElementById('hud').style.display = 'block';
         engine.startNextLevel();
       } else {
-        // 시간 종료 → 처음부터 다시 시작
+        // 시간 종료 → 음식 선택 → 카운트다운 → 처음부터
         engine.ending.stop();
         engine.gameEnded = false;
         engine.level = 1;
-        document.getElementById('hud').style.display = 'block';
+        engine.score = 0; engine.totalEaten = 0;
         prevEatenCount = 0;
-        document.getElementById('hudEaten').innerHTML = '';
         engine.timeLeft = 60; engine.totalTime = 60;
-        engine.start();
+        engine.showFoodSelect();
       }
     } else if (!engine.running) {
       beginGame();
@@ -539,14 +571,14 @@ addEventListener('keydown', e => {
 addEventListener('touchend', e => {
   if (engine.gameEnded) {
     if (engine.levelCleared) {
-      prevEatenCount = 0; document.getElementById('hudEaten').innerHTML = '';
-      document.getElementById('hud').style.display = 'block';
+      prevEatenCount = 0;
       engine.startNextLevel();
     } else {
       engine.ending.stop(); engine.gameEnded = false; engine.level = 1;
-      document.getElementById('hud').style.display = 'block';
-      prevEatenCount = 0; document.getElementById('hudEaten').innerHTML = '';
-      engine.timeLeft = 60; engine.totalTime = 60; engine.start();
+      engine.score = 0; engine.totalEaten = 0;
+      prevEatenCount = 0;
+      engine.timeLeft = 60; engine.totalTime = 60;
+      engine.showFoodSelect();
     }
   } else if (engine.running) { engine.tryBite(); }
 }, { passive: true });

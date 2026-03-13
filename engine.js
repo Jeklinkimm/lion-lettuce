@@ -237,6 +237,31 @@ class SoundManager {
     src.start();
   }
 
+  /** 음식 보이스 로드 */
+  loadFoodVoices(basePath = 'assets') {
+    this.foodVoiceBuffers = {};
+    FOODS.forEach(food => {
+      const url = `${basePath}/voice/food/${food.voice}.wav`;
+      fetch(url)
+        .then(r => r.arrayBuffer())
+        .then(buf => this.ctx.decodeAudioData(buf))
+        .then(decoded => { this.foodVoiceBuffers[food.voice] = decoded; })
+        .catch(e => console.warn('Failed to load food voice:', url, e));
+    });
+  }
+
+  /** 음식 보이스 재생 */
+  playFoodVoice(voiceKey) {
+    if (!this.ready || !this.foodVoiceBuffers || !this.foodVoiceBuffers[voiceKey]) return;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.foodVoiceBuffers[voiceKey];
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start();
+  }
+
   /** 룰렛 틱 사운드 — 아이템 하나 넘어갈 때마다 */
   playSlotTick(pitch) {
     if (!this.ready) return;
@@ -402,8 +427,8 @@ class SoundManager {
 
 
 // ─── Cabbage State Machine ──────────────────────────────────
-const CABBAGE_STATES = { NORMAL: 0, CRUSH1: 1, CRUSH2: 2 };
-const CABBAGE_MAX_HEALTH = 3;
+const CABBAGE_STATES = { NORMAL: 0, CRUSH1: 1 };
+const CABBAGE_MAX_HEALTH = 2;
 
 class Cabbage {
   constructor(x, y, vx, vy, size, canvasW, canvasH) {
@@ -442,12 +467,9 @@ class Cabbage {
     if (this.dead || this.health <= 0) return false;
     this.health--;
     this.shakeTimer = 0.35; this.squishScale = 0.5; this.flashTimer = 0.2;
-    if (this.health === 2) {
+    if (this.health === 1) {
       this.crushState = CABBAGE_STATES.CRUSH1;
-      this.crushScaleX = 1.15; this.crushScaleY = 0.88;
-    } else if (this.health === 1) {
-      this.crushState = CABBAGE_STATES.CRUSH2;
-      this.crushScaleX = 1.3; this.crushScaleY = 0.75;
+      this.crushScaleX = 1.2; this.crushScaleY = 0.82;
     } else if (this.health <= 0) {
       this.phase = 'exploding';
       this.explodeTimer = 0.08;
@@ -459,7 +481,6 @@ class Cabbage {
   getImage() {
     switch (this.crushState) {
       case CABBAGE_STATES.CRUSH1: return Assets.lettuce.crush1;
-      case CABBAGE_STATES.CRUSH2: return Assets.lettuce.crush2;
       default: return Assets.lettuce.normal;
     }
   }
@@ -666,9 +687,9 @@ class Lion {
 class ParticleSystem {
   constructor() { this.particles = []; }
 
-  emitEat(x, y, intensity = 1) {
+  emitEat(x, y, intensity = 1, foodEmoji) {
     const count = Math.floor(18 * intensity);
-    const emojis = ['🥬', '⭐', '💚', '🌿', '✨', '🎉', '💥', '🔥'];
+    const emojis = [foodEmoji || '⭐', '⭐', '✨', '🎉', '💥', '🔥'];
     const colors = ['#CFEFCF', '#E8D7FF', '#FFD6E8', '#FFE8A8', '#FFD700', '#FF6B6B', '#FF8C00'];
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
@@ -985,15 +1006,34 @@ class ScreenShake {
 }
 
 
-// ─── Vegetable Roulette ─────────────────────────────────────
-const VEGETABLES = [
-  { emoji: '🥕', name: '당근', color: '#FF8C42' },
-  { emoji: '🍅', name: '토마토', color: '#E74C3C' },
-  { emoji: '🌽', name: '옥수수', color: '#F1C40F' },
-  { emoji: '🥦', name: '브로콜리', color: '#27AE60' },
-  { emoji: '🫑', name: '피망', color: '#2ECC71' },
-  { emoji: '🍆', name: '가지', color: '#8E44AD' },
+// ─── Food Selection ─────────────────────────────────────────
+const FOOD_GROUPS = [
+  { label: '과일', items: [
+    { emoji: '🍎', name: '사과', voice: 'apple' },
+    { emoji: '🍌', name: '바나나', voice: 'banana' },
+    { emoji: '🍇', name: '포도', voice: 'grape' },
+    { emoji: '🍓', name: '딸기', voice: 'strawberry' },
+    { emoji: '🍊', name: '귤', voice: 'tangerine' },
+    { emoji: '🍉', name: '수박', voice: 'watermelon' },
+  ]},
+  { label: '간식', items: [
+    { emoji: '🍕', name: '피자', voice: 'pizza' },
+    { emoji: '🍔', name: '햄버거', voice: 'hamburger' },
+    { emoji: '🍟', name: '감자튀김', voice: 'fries' },
+    { emoji: '🌭', name: '핫도그', voice: 'hotdog' },
+    { emoji: '🍬', name: '사탕', voice: 'candy' },
+    { emoji: '🧃', name: '주스', voice: 'juice' },
+  ]},
+  { label: '디저트', items: [
+    { emoji: '🍩', name: '도넛', voice: 'donut' },
+    { emoji: '🍰', name: '케이크', voice: 'cake' },
+    { emoji: '🧁', name: '컵케이크', voice: 'cupcake' },
+    { emoji: '🍦', name: '아이스크림', voice: 'icecream' },
+    { emoji: '🍪', name: '쿠키', voice: 'cookie' },
+    { emoji: '🍫', name: '초콜릿', voice: 'chocolate' },
+  ]},
 ];
+const FOODS = FOOD_GROUPS.flatMap(g => g.items);
 
 const _emojiCache = {};
 function getEmojiImage(emoji, size) {
@@ -1011,206 +1051,6 @@ function getEmojiImage(emoji, size) {
   return off;
 }
 
-class VegetableRoulette {
-  constructor() {
-    this.active = false;
-    this.timer = 0;
-    this.items = [];
-    this.scrollX = 0;
-    this.speed = 0;
-    this.selectedVeg = null;
-    this.phase = 'idle';
-    this.pickFlash = 0;
-    this.pickScale = 1;
-    this.pickBounce = 0;
-    this.CW = 0; this.CH = 0;
-    this._lastTickIdx = 0;
-    this.sound = null;
-  }
-
-  start(cw, ch) {
-    this.CW = cw; this.CH = ch;
-    this.active = true;
-    this.timer = 0;
-    this.phase = 'rolling';
-    this.selectedVeg = null;
-    this.pickFlash = 0;
-    this.pickScale = 1;
-    this.pickBounce = 0;
-    this._uiFade = 0;
-    this._lastTickIdx = 0;
-    this.items = [];
-    let prev = -1;
-    for (let i = 0; i < 40; i++) {
-      let idx;
-      do { idx = Math.floor(Math.random() * VEGETABLES.length); } while (idx === prev);
-      prev = idx;
-      this.items.push(VEGETABLES[idx]);
-    }
-    const pickIdx = 27;
-    const picked = VEGETABLES[Math.floor(Math.random() * VEGETABLES.length)];
-    this.items[pickIdx] = picked;
-    if (this.items[pickIdx - 1]?.emoji === picked.emoji) {
-      const others = VEGETABLES.filter(v => v.emoji !== picked.emoji);
-      this.items[pickIdx - 1] = others[Math.floor(Math.random() * others.length)];
-    }
-    if (this.items[pickIdx + 1]?.emoji === picked.emoji) {
-      const others = VEGETABLES.filter(v => v.emoji !== picked.emoji);
-      this.items[pickIdx + 1] = others[Math.floor(Math.random() * others.length)];
-    }
-    this._pickIdx = pickIdx;
-    this._picked = picked;
-    this.scrollX = 0;
-    this.speed = 1200;
-    this._itemSize = 90;
-    this._targetScrollX = pickIdx * this._itemSize;
-  }
-
-  update(dt) {
-    if (!this.active) return;
-    this.timer += dt;
-
-    if (this.phase === 'rolling') {
-      if (this.timer < 0.5) {
-        this.speed = 1200 + this.timer * 400;
-      } else {
-        this.phase = 'slowing';
-      }
-      this.scrollX += this.speed * dt;
-    }
-
-    if (this.phase === 'slowing') {
-      const remaining = this._targetScrollX - this.scrollX;
-      if (remaining > 10) {
-        this.speed = Math.max(60, remaining * 2.5);
-        this.scrollX += this.speed * dt;
-      } else {
-        this.scrollX = this._targetScrollX;
-        this.phase = 'picked';
-        this.timer = 0;
-        this.selectedVeg = this._picked;
-        this.pickFlash = 1;
-        this.pickScale = 2.0;
-        if (this.sound) this.sound.playSlotPick();
-      }
-    }
-
-    if (this.phase === 'rolling' || this.phase === 'slowing') {
-      const curIdx = Math.floor(this.scrollX / this._itemSize);
-      if (curIdx > this._lastTickIdx) {
-        this._lastTickIdx = curIdx;
-        if (this.sound) this.sound.playSlotTick(this.phase === 'slowing' ? 1 : 0);
-      }
-    }
-
-    if (this.phase === 'picked') {
-      this.pickFlash = Math.max(0, this.pickFlash - dt * 2);
-      this.pickScale += (2.5 - this.pickScale) * Math.min(1, dt * 3);
-      this.pickBounce = Math.sin(this.timer * 8) * Math.max(0, 1 - this.timer) * 6;
-      this._uiFade = Math.min(1, (this._uiFade || 0) + dt * 2.5);
-      if (this.timer > 1.8) {
-        this.phase = 'done';
-        this.active = false;
-      }
-    }
-  }
-
-  draw(ctx) {
-    if (!this.active) return;
-    const cw = this.CW, ch = this.CH;
-    const cx = cw / 2, cy = ch / 2;
-    const itemSize = this._itemSize;
-    const fade = this._uiFade || 0;
-    const uiAlpha = 1 - fade;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(0, 0, cw, ch);
-
-    if (uiAlpha > 0.01) {
-      ctx.save();
-      ctx.globalAlpha = uiAlpha;
-      ctx.font = 'bold 36px Jua, sans-serif';
-      ctx.fillStyle = '#FFD700';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 10;
-      ctx.fillText('오늘은 뭘 먹어볼까?', cx, cy - 90);
-      ctx.restore();
-    }
-
-    const stripW = Math.min(420, cw * 0.8);
-    const stripH = 100;
-    const stripX = cx - stripW / 2;
-    const stripY = cy - stripH / 2;
-
-    if (uiAlpha > 0.01) {
-      ctx.save();
-      ctx.globalAlpha = uiAlpha;
-      ctx.beginPath();
-      ctx.roundRect(stripX, stripY, stripW, stripH, 20);
-      ctx.fillStyle = '#FFFDF5';
-      ctx.fill();
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(stripX, stripY, stripW, stripH, 20);
-    ctx.clip();
-    const emojiPx = Math.round(itemSize * 0.7);
-    const halfStrip = stripW / 2 + itemSize;
-    for (let i = 0; i < this.items.length; i++) {
-      if (this.phase === 'picked' && i === this._pickIdx) continue;
-      const x = cx + i * itemSize - this.scrollX;
-      if (x < cx - halfStrip || x > cx + halfStrip) continue;
-      ctx.globalAlpha = this.phase === 'picked' ? uiAlpha : 1;
-      const eImg = getEmojiImage(this.items[i].emoji, emojiPx);
-      const es = eImg.width;
-      ctx.drawImage(eImg, x - es / 2, cy - es / 2, es, es);
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    if (this.phase === 'picked') {
-      ctx.save();
-      if (this.pickFlash > 0) {
-        ctx.globalAlpha = this.pickFlash * 0.4;
-        ctx.fillStyle = '#FFD700';
-        ctx.fillRect(0, 0, cw, ch);
-        ctx.globalAlpha = 1;
-      }
-      ctx.translate(cx, cy + this.pickBounce);
-      ctx.scale(this.pickScale, this.pickScale);
-      const pickImg = getEmojiImage(this.selectedVeg.emoji, Math.round(itemSize * 0.7));
-      const ps = pickImg.width;
-      ctx.drawImage(pickImg, -ps / 2, -ps / 2, ps, ps);
-      ctx.restore();
-    }
-
-    if (uiAlpha > 0.01) {
-      ctx.save();
-      ctx.globalAlpha = uiAlpha;
-      ctx.fillStyle = '#FFD700';
-      ctx.shadowColor = 'rgba(255,215,0,0.5)';
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.moveTo(cx - 14, stripY - 10);
-      ctx.lineTo(cx + 14, stripY - 10);
-      ctx.lineTo(cx, stripY + 6);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(cx - 14, stripY + stripH + 10);
-      ctx.lineTo(cx + 14, stripY + stripH + 10);
-      ctx.lineTo(cx, stripY + stripH - 6);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-}
 
 
 // ─── Game Engine ────────────────────────────────────────────
@@ -1232,9 +1072,8 @@ class GameEngine {
     this.gameEnded = false;
     this.flashAlpha = 0; this.flashColor = '#fff';
     this.config = { cabbageSize: 140, fxIntensity: 1, maxCabbages: 5, spawnWaitSec: 10, clearGoal: 5 };
-    this.roulette = new VegetableRoulette();
-    this.roulette.sound = this.sound;
     this.selectedVegetable = null;
+    this._waitingForSelection = false;
     this.level = 1;
     this.levelCleared = false;
     this._lastTime = 0;
@@ -1245,9 +1084,9 @@ class GameEngine {
     this.sound.init();
     this.sound.loadCheerVoices();
     this.sound.loadReadyVoice();
+    this.sound.loadFoodVoices();
     this.lion.x = this.CW / 2;
-    this.lion.y = this.CH * 0.75;
-    this.lion.baseScale = 0.65;
+    this.lion.y = this.CH * 0.65;
   }
 
   start() {
@@ -1259,10 +1098,30 @@ class GameEngine {
     this.lion.bellyScale = 0; this.lion.jawOpen = 0;
     this._lastTime = performance.now();
     this.ending.stop();
-    this.sound.resume(); this.sound.startBGM();
     this.selectedVegetable = null;
-    this._rouletteWaiting = true;
-    this.roulette.start(this.CW, this.CH);
+    this._waitingForSelection = true;
+  }
+
+  /** 음식 선택 화면 표시 (index.html에서 호출) */
+  showFoodSelect() {
+    this.selectedVegetable = null;
+    this._waitingForSelection = true;
+    if (this.onShowFoodSelect) this.onShowFoodSelect();
+  }
+
+  selectFood(food) {
+    this.selectedVegetable = food;
+    this._waitingForSelection = false;
+    this.sound.playSlotPick();
+    if (food.voice) this.sound.playFoodVoice(food.voice);
+  }
+
+  /** 카운트다운 후 실제 게임 시작 (index.html에서 호출) */
+  startGame() {
+    this.running = true;
+    this._lastTime = performance.now();
+    this.sound.resume(); this.sound.startBGM();
+    this.spawnCabbage();
   }
 
   stop() {
@@ -1272,19 +1131,18 @@ class GameEngine {
 
   startNextLevel() {
     this.level++;
-    this.running = true; this.paused = false; this.gameEnded = false;
+    this.paused = false; this.gameEnded = false;
     this.levelCleared = false;
-    this.totalEaten = 0;
+    this.score = 0; this.totalEaten = 0;
     this.cabbages = [];
     this.particles.particles = []; this.floatingText.texts = [];
     this.lion.jawOpen = 0;
     this.timeLeft = 60; this.totalTime = 60;
     this._lastTime = performance.now();
     this.ending.stop();
-    this.sound.resume(); this.sound.startBGM();
     this.selectedVegetable = null;
-    this._rouletteWaiting = true;
-    this.roulette.start(this.CW, this.CH);
+    this._waitingForSelection = true;
+    if (this.onShowFoodSelect) this.onShowFoodSelect();
   }
 
   spawnCabbage() {
@@ -1301,7 +1159,7 @@ class GameEngine {
   flash(color = '#fff', alpha = 0.3) { this.flashColor = color; this.flashAlpha = alpha; }
 
   tryBite() {
-    if (!this.running || this.paused || this._rouletteWaiting) return;
+    if (!this.running || this.paused || this._waitingForSelection) return;
     this.totalBites++;
     this.sound.resume();
     this.lion.snapJaw();
@@ -1321,12 +1179,13 @@ class GameEngine {
     if (stuck) {
       const fullyEaten = stuck.bite();
       this.sound.playCrunchBite(); // 와구작 크런치 사운드
+      if (this.selectedVegetable && this.selectedVegetable.voice) this.sound.playFoodVoice(this.selectedVegetable.voice);
       this.particles.emitBiteSparkle(stuck.x, stuck.y);
 
       if (fullyEaten) {
         this.score++; this.totalEaten++;
         // 최대 타격감 폭발!
-        this.particles.emitEat(stuck.x, stuck.y, 5);
+        this.particles.emitEat(stuck.x, stuck.y, 5, vegIcon);
         this.floatingText.add('+1 ' + vegIcon, stuck.x, stuck.y - 30, '#FFD700', 52);
         this.sound.playEatComplete();
         this.screenShake.trigger(35, 0.6);
@@ -1366,6 +1225,7 @@ class GameEngine {
     best.attractTo(mouthX, mouthY);
     const fullyEaten = best.bite();
     this.sound.playBite();
+    if (this.selectedVegetable && this.selectedVegetable.voice) this.sound.playFoodVoice(this.selectedVegetable.voice);
     this.particles.emitBiteSparkle(mouthX, mouthY);
     this.particles.emitCrush(best.x, best.y);
     this.sound.playCrush();
@@ -1375,7 +1235,7 @@ class GameEngine {
 
     if (fullyEaten) {
       this.score++; this.totalEaten++;
-      this.particles.emitEat(best.x, best.y, 5);
+      this.particles.emitEat(best.x, best.y, 5, vegIcon);
       this.floatingText.add('+1 ' + vegIcon, best.x, best.y-30, '#FFD700', 52);
       this.sound.playEatComplete();
       this.screenShake.trigger(35, 0.6);
@@ -1403,16 +1263,7 @@ class GameEngine {
 
     if (!this.running || this.paused) return;
 
-    // 룰렛 업데이트
-    if (this.roulette.active) {
-      this.roulette.update(dt);
-      if (!this.roulette.active && this.roulette.phase === 'done') {
-        this.selectedVegetable = this.roulette.selectedVeg;
-        this._rouletteWaiting = false;
-        this.spawnCabbage();
-      }
-    }
-    if (this._rouletteWaiting) return;
+    if (this._waitingForSelection) return;
 
     this.timeLeft -= dt;
     // 게임 종료 조건: 시간 종료 OR 클리어 목표 달성
@@ -1490,5 +1341,6 @@ window.ScreenShake = ScreenShake;
 window.EndingSystem = EndingSystem;
 window.CABBAGE_STATES = CABBAGE_STATES;
 window.checkLionCollision = checkLionCollision;
-window.VegetableRoulette = VegetableRoulette;
-window.VEGETABLES = VEGETABLES;
+window.FOODS = FOODS;
+window.FOOD_GROUPS = FOOD_GROUPS;
+window.getEmojiImage = getEmojiImage;
